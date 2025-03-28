@@ -6,14 +6,14 @@ WORKDIR /app
 # First copy both package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with npm install instead of npm ci
+RUN npm install --production=false
 
 # Copy source code and other necessary files
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p public/css
+# Create necessary directories and ensure they exist
+RUN mkdir -p public/css dist
 
 # Build TypeScript and CSS
 RUN npm run build:css
