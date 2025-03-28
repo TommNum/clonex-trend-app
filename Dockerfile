@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Create necessary directories
+RUN mkdir -p public/css
+
 # Build TypeScript and CSS
 RUN npm run build:css
 RUN npm run build
@@ -25,6 +28,11 @@ COPY Caddyfile /etc/caddy/Caddyfile
 # Copy built application
 COPY --from=builder /app/dist /usr/share/caddy
 COPY --from=builder /app/public/css/tailwind.css /usr/share/caddy/css/tailwind.css
+COPY --from=builder /app/public/css/style.css /usr/share/caddy/css/style.css
+COPY --from=builder /app/views /usr/share/caddy/views
+
+# Create necessary directories
+RUN mkdir -p /usr/share/caddy/public/uploads
 
 # Expose port
 EXPOSE 3000

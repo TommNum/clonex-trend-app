@@ -1,0 +1,35 @@
+# global options
+{
+  admin off # No need for admin API in Railway
+  persist_config off # Storage isn't persistent anyway
+  auto_https off # Railway handles HTTPS
+  log {
+    format json # Set runtime log format to JSON
+  }
+  servers {
+    trusted_proxies static private_ranges 100.0.0.0/8 # Trust Railway's proxy
+  }
+}
+
+# Site block, listens on PORT environment variable
+:{$PORT:3000} {
+  # Access logs
+  log {
+    format json
+  }
+
+  # Health check for Railway
+  rewrite /health /*
+
+  # Serve from the root folder
+  root * /usr/share/caddy
+
+  # Enable gzipping responses
+  encode gzip
+
+  # Serve static files
+  file_server
+
+  # For SPA - route all non-file requests to index.html
+  try_files {path} /index.html
+} 
