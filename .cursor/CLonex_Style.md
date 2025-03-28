@@ -15,10 +15,10 @@ The app uses a combination of fonts:
 The application uses glassmorphism effects, gradient borders, and other design patterns:
 
     Glass cards with backdrop blur
-Gradient borders and text
-Neon effects for buttons and interactive elements
-Premium and standard UI variants
-Let me share the complete styling system you can adopt:
+    Gradient borders and text
+    Neon effects for buttons and interactive elements
+    Premium and standard UI variants
+    Let me share the complete styling system you can adopt:
 
 The application uses Tailwind CSS with a specific configuration. Here's what you would need to implement to match the style:
 

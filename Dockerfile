@@ -6,9 +6,16 @@ WORKDIR /app
 # Install dependencies first
 COPY package*.json ./
 
-# Install dependencies with specific npm version and flags
-RUN npm install -g npm@10.8.2 && \
-    npm install --legacy-peer-deps
+# Install dependencies with a more stable approach
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g npm@10.8.2 \
+    && npm cache clean --force \
+    && npm install --no-audit --no-fund --legacy-peer-deps
 
 # Copy source code and other necessary files
 COPY . .
