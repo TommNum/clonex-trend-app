@@ -31,7 +31,7 @@ export interface User {
   accessToken: string;
   refreshToken: string;
   tokenExpiry: number;
-  role?: string;
+  role: 'user' | 'admin';
 }
 
 export interface AuthResponse {
