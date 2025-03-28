@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Trend Avatar App</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Trend Avatar Dashboard</h1>
+            <div class="user-bar">
+                <img src="<%= user.profileImageUrl %>" alt="<%= user.username %>" class="avatar">
+                <span>@<%= user.username %></span>
+                <a href="/auth/logout" class="btn secondary small">Logout</a>
+            </div>
+        </header>
+        
+        <main>
+            <div class="dashboard-actions">
+                <button id="refreshTrends" class="btn primary">Refresh Trends</button>
+                <button id="autoProcess" class="btn highlight">Auto-Process Trend</button>
+            </div>
+            
+            <div class="dashboard-content">
+                <div class="trends-panel">
+                    <h2>Your Personalized Trends</h2>
+                    <div id="trendsContainer" class="trends-container">
+                        <p class="loading">Loading trends...</p>
+                    </div>
+                </div>
+                
+                <div class="result-panel">
+                    <h2>Media Preview</h2>
+                    <div id="mediaPreview" class="media-preview">
+                        <p>Select a trend to preview media</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="processResult" class="process-result hidden">
+                <h3>Ready to Post</h3>
+                <div class="result-content">
+                    <div class="result-image">
+                        <img id="resultImage" src="" alt="Processed Image">
+                    </div>
+                    <div class="result-caption">
+                        <textarea id="caption" rows="3" placeholder="Caption"></textarea>
+                    </div>
+                </div>
+                <button id="postToX" class="btn primary">Post to X</button>
+            </div>
+        </main>
+        
+        <footer>
+            <p>&copy; 2024 Trend Avatar App</p>
+        </footer>
+    </div>
+    
+    <script src="/js/dashboard.js"></script>
+</body>
+</html> 

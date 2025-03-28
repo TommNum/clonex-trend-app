@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trend Avatar App</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Trend Avatar App</h1>
+            <p>Turn yourself into trending memes on X automatically!</p>
+        </header>
+
+        <main>
+            <div class="hero">
+                <h2>Make Yourself Part of the Trend</h2>
+                <p>Connect your X account to automatically create personalized content based on what's trending.</p>
+                
+                <% if (user) { %>
+                    <div class="user-info">
+                        <img src="<%= user.profileImageUrl %>" alt="<%= user.username %>" class="avatar">
+                        <p>Logged in as <strong>@<%= user.username %></strong></p>
+                        <a href="/dashboard" class="btn primary">Go to Dashboard</a>
+                        <a href="/auth/logout" class="btn secondary">Logout</a>
+                    </div>
+                <% } else { %>
+                    <a href="/auth/login" class="btn primary">Connect with X</a>
+                <% } %>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>Personalized Trends</h3>
+                    <p>Our AI analyzes trends personalized to your X account.</p>
+                </div>
+                <div class="feature">
+                    <h3>Avatar Swap</h3>
+                    <p>We swap your profile image into trending memes and images.</p>
+                </div>
+                <div class="feature">
+                    <h3>Auto Posting</h3>
+                    <p>Automatically post the content with clever captions to your X account.</p>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>&copy; 2024 Trend Avatar App. This is not affiliated with X.</p>
+        </footer>
+    </div>
+</body>
+</html> 
