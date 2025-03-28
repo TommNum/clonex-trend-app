@@ -17,14 +17,12 @@ RUN npm install -g npm@10.8.2 && \
     npm cache clean --force && \
     npm install --no-audit --no-fund --legacy-peer-deps
 
-# Create necessary directories
-RUN mkdir -p public/css dist
-
-# Copy source code
+# Create necessary directories and copy source files
 COPY . .
+RUN mkdir -p public/css
 
-# Create base CSS file if it doesn't exist
-RUN touch public/css/style.css
+# Ensure style.css exists with content
+RUN echo '@tailwind base;\n@tailwind components;\n@tailwind utilities;' > public/css/style.css
 
 # Build TypeScript and CSS
 RUN npm run build:css && \
