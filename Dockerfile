@@ -1,8 +1,6 @@
 # Build stage
 FROM node:20-slim AS builder
 
-WORKDIR /app
-
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -11,11 +9,10 @@ RUN apt-get update && \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Create necessary directories and initialize CSS file
-RUN mkdir -p public/css && \
-    echo '@tailwind base;\n@tailwind components;\n@tailwind utilities;' > public/css/style.css
+# Set working directory
+WORKDIR /app
 
-# Install npm dependencies
+# Install dependencies
 COPY package*.json ./
 RUN npm install -g npm@10.8.2 && \
     npm cache clean --force && \
@@ -35,17 +32,16 @@ FROM caddy:2-alpine
 # Copy Caddy configuration
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# Copy built application
-COPY --from=builder /app/dist /usr/share/caddy
-COPY --from=builder /app/public/css/tailwind.css /usr/share/caddy/css/tailwind.css
-COPY --from=builder /app/public/css/style.css /usr/share/caddy/css/style.css
+# Copy built application files
+COPY --from=builder /app/dist /usr/share/caddy/dist
+COPY --from=builder /app/public /usr/share/caddy/public
 COPY --from=builder /app/views /usr/share/caddy/views
 
 # Create necessary directories
-RUN mkdir -p /usr/share/caddy/public/uploads
+RUN mkdir -p /usr/share/caddy/uploads
 
 # Expose port
 EXPOSE 3000
 
 # Start Caddy
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"] 
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"] 

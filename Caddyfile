@@ -21,14 +21,19 @@
   # Health check for Railway
   rewrite /health /*
 
-  # Serve from the root folder
-  root * /usr/share/caddy
+  # Serve static files from public directory
+  root * /usr/share/caddy/public
 
   # Enable gzipping responses
   encode gzip
 
   # Serve static files
   file_server
+
+  # Handle API routes
+  handle /api/* {
+    reverse_proxy localhost:3000
+  }
 
   # For SPA - route all non-file requests to index.html
   try_files {path} /index.html
