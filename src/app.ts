@@ -59,6 +59,7 @@ app.use(session({
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/css', express.static(path.join(__dirname, '../public/css')));
 
 // View engine
 app.set('view engine', 'ejs');

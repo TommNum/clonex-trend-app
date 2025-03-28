@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Trend Avatar App</title>
+  <link rel="stylesheet" href="/css/tailwind.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="max-w-md mx-auto">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-twitter-blue" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-extrabold text-gray-900">Create your account</h1>
+        <p class="mt-2 text-gray-500">Join Trend Avatar and start creating personalized content</p>
+      </div>
+      
+      <div class="twitter-card">
+        <div class="p-6">
+          <div class="space-y-6">
+            <div>
+              <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+              <input type="text" id="username" name="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-twitter-blue focus:ring-twitter-blue sm:text-sm">
+            </div>
+            
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+              <input type="email" id="email" name="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-twitter-blue focus:ring-twitter-blue sm:text-sm">
+            </div>
+            
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+              <input type="password" id="password" name="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-twitter-blue focus:ring-twitter-blue sm:text-sm">
+            </div>
+            
+            <div>
+              <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+              <input type="password" id="confirm-password" name="confirm-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-twitter-blue focus:ring-twitter-blue sm:text-sm">
+            </div>
+            
+            <div class="flex items-center">
+              <input type="checkbox" id="terms" name="terms" class="rounded border-gray-300 text-twitter-blue shadow-sm focus:border-twitter-blue focus:ring focus:ring-twitter-blue focus:ring-opacity-50">
+              <label for="terms" class="ml-2 text-sm text-gray-700">
+                I agree to the <a href="/terms" class="text-twitter-blue hover:text-twitter-blue-dark">Terms of Service</a> and <a href="/privacy" class="text-twitter-blue hover:text-twitter-blue-dark">Privacy Policy</a>
+              </label>
+            </div>
+            
+            <button type="submit" class="btn-twitter w-full">
+              Create Account
+            </button>
+            
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+            
+            <a href="/auth/x" class="btn-twitter-outline w-full inline-flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+              </svg>
+              Connect with X
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-500">
+          Already have an account?
+          <a href="/auth/login" class="text-twitter-blue hover:text-twitter-blue-dark">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 
