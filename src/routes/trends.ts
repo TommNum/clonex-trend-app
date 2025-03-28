@@ -1,20 +1,16 @@
-import { Router } from 'express';
+import express from 'express';
+import { requireAuth } from '../middleware/auth';
 import * as trendController from '../controllers/trendController';
-import { authenticate, rateLimit } from '../middleware/auth';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication middleware to all routes
-router.use(authenticate);
+// Get all trends
+router.get('/', requireAuth, trendController.getTrends);
 
-// Apply rate limiting to all routes
-router.use(rateLimit(100, 60000)); // 100 requests per minute
+// Get trend details
+router.get('/:trendId', requireAuth, trendController.getTrendDetails);
 
-// Trend routes
-router.get('/', trendController.getTrends);
-router.get('/analyze/:trendId', trendController.analyzeTrend);
-router.post('/process/:trendName', trendController.processMediaSwap);
-router.post('/post', trendController.postToX);
-router.post('/auto-process', trendController.autoProcessTrend);
+// Swap media for a trend
+router.post('/:trendId/swap', requireAuth, trendController.swapTrendMedia);
 
 export default router; 

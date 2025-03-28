@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import XApiService from '../services/xApiService';
 import { User } from '../types';
@@ -7,11 +7,14 @@ import { Session, SessionData } from 'express-session';
 declare module 'express-session' {
   interface SessionData {
     user?: {
+      id: string;
+      username: string;
+      email?: string;
+      profileImageUrl?: string;
       accessToken: string;
       refreshToken: string;
       tokenExpiry: number;
-      userId: string;
-      username: string;
+      role?: string;
     };
     codeVerifier?: string;
     authResponse?: {
@@ -26,7 +29,6 @@ declare global {
   namespace Express {
     interface Request {
       user?: User;
-      session: Session & Partial<SessionData>;
       isAuthenticated(): this is AuthenticatedRequest;
     }
   }
@@ -58,7 +60,7 @@ export class AuthMiddleware {
   }
 
   // Main authentication middleware that handles both JWT and X auth
-  public authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  public authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // First try JWT authentication
       const token = this.extractTokenFromHeader(req);
@@ -70,7 +72,8 @@ export class AuthMiddleware {
           req.isAuthenticated = function(): this is AuthenticatedRequest {
             return true;
           };
-          return next();
+          next();
+          return;
         } catch (error) {
           // If JWT fails, try X authentication
           console.log('JWT verification failed, trying X authentication');
@@ -79,7 +82,8 @@ export class AuthMiddleware {
 
       // Try X authentication
       if (!req.session?.user) {
-        return res.redirect('/auth/login');
+        res.redirect('/auth/login');
+        return;
       }
 
       const user = req.session.user;
@@ -94,26 +98,30 @@ export class AuthMiddleware {
           req.session.user = user;
         } catch (error) {
           console.error('Failed to refresh X token:', error);
-          return res.redirect('/auth/login');
+          res.redirect('/auth/login');
+          return;
         }
       }
 
       req.user = {
-        id: user.userId,
+        id: user.id,
         username: user.username,
+        email: user.email,
+        profileImageUrl: user.profileImageUrl,
         accessToken: user.accessToken,
         refreshToken: user.refreshToken,
-        tokenExpiry: user.tokenExpiry
+        tokenExpiry: user.tokenExpiry,
+        role: user.role
       };
       
       req.isAuthenticated = function(): this is AuthenticatedRequest {
         return true;
       };
       
-      return next();
+      next();
     } catch (error) {
       console.error('Authentication error:', error);
-      return res.status(401).json({ error: 'Authentication failed' });
+      res.status(401).json({ error: 'Authentication failed' });
     }
   };
 
@@ -123,10 +131,12 @@ export class AuthMiddleware {
       {
         id: user.id,
         username: user.username,
+        email: user.email,
+        profileImageUrl: user.profileImageUrl,
         accessToken: user.accessToken,
         refreshToken: user.refreshToken,
         tokenExpiry: user.tokenExpiry,
-        role: user.role || 'user'
+        role: user.role
       },
       this.JWT_SECRET,
       { expiresIn: '1d' }
@@ -134,65 +144,72 @@ export class AuthMiddleware {
   };
 
   // Verify JWT token
-  public verifyToken = async (req: Request, res: Response, next: NextFunction) => {
+  public verifyToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        res.status(401).json({ error: 'No token provided' });
+        return;
       }
 
       const decoded = jwt.verify(token, this.JWT_SECRET) as User;
       req.user = decoded;
-      return next();
+      next();
     } catch (error) {
       console.error('Token verification error:', error);
-      return res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Invalid token' });
     }
   };
 
   // Check if user has required role
-  public requireRole = (requiredRole: string) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+  public requireRole = (requiredRole: string): RequestHandler => {
+    const handler: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
       if (!req.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        res.status(401).json({ error: 'Not authenticated' });
+        return;
       }
 
-      if (req.user.role !== requiredRole) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
+      if (!req.user.role || req.user.role !== requiredRole) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
       }
 
-      return next();
+      next();
     };
+    return handler;
   };
 
   // Check if user is authenticated
-  public isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  public isAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
     }
-    return next();
+    next();
   };
 
   // Check if user is not authenticated (for login/register routes)
-  public isNotAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  public isNotAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
     if (req.user) {
-      return res.status(403).json({ error: 'Already authenticated' });
+      res.status(403).json({ error: 'Already authenticated' });
+      return;
     }
-    return next();
+    next();
   };
 
   // Rate limiting middleware
-  public rateLimit = (limit: number, windowMs: number) => {
+  public rateLimit = (limit: number, windowMs: number): RequestHandler => {
     const requests = new Map<string, { count: number; timestamp: number }>();
 
-    return (req: Request, res: Response, next: NextFunction) => {
+    const handler: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
       const ip = req.ip || req.socket.remoteAddress;
       if (!ip) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Could not determine client IP'
         });
+        return;
       }
 
       const now = Date.now();
@@ -201,19 +218,28 @@ export class AuthMiddleware {
       if (!userRequests) {
         requests.set(ip, { count: 1, timestamp: now });
         next();
-      } else if (now - userRequests.timestamp > windowMs) {
+        return;
+      }
+
+      if (now - userRequests.timestamp > windowMs) {
         requests.set(ip, { count: 1, timestamp: now });
         next();
-      } else if (userRequests.count >= limit) {
-        return res.status(429).json({ 
+        return;
+      }
+
+      if (userRequests.count >= limit) {
+        res.status(429).json({ 
           success: false, 
           message: 'Too many requests, please try again later' 
         });
-      } else {
-        userRequests.count++;
-        next();
+        return;
       }
+
+      userRequests.count++;
+      next();
     };
+
+    return handler;
   };
 
   // Extract token from Authorization header
@@ -225,14 +251,16 @@ export class AuthMiddleware {
     return type === 'Bearer' ? token : null;
   }
 
-  public validateRequest = (schema: any) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+  public validateRequest = (schema: any): RequestHandler => {
+    const validator: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
       const { error } = schema.validate(req.body);
       if (error) {
-        return res.status(400).json({ error: error.details[0].message });
+        res.status(400).json({ error: error.details[0].message });
+        return;
       }
-      return next();
+      next();
     };
+    return validator;
   };
 }
 
@@ -249,4 +277,42 @@ export const {
   rateLimit,
   generateToken,
   validateRequest
-} = authMiddleware; 
+} = authMiddleware;
+
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect('/auth/login');
+  }
+  return next();
+};
+
+export const requireGuest = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated()) {
+    return res.redirect('/dashboard');
+  }
+  return next();
+};
+
+export const requireApiKey = (req: Request, res: Response, next: NextFunction) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.API_KEY) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+  return next();
+};
+
+export const checkSession = (req: Request, res: Response, next: NextFunction) => {
+  console.log('Session check middleware:', {
+    sessionId: req.session.id,
+    hasSession: !!req.session,
+    hasCodeVerifier: !!req.session?.codeVerifier,
+    hasUser: !!req.session?.user,
+    cookies: req.cookies,
+    headers: {
+      host: req.headers.host,
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    }
+  });
+  next();
+}; 

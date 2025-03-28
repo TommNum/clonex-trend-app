@@ -1,13 +1,15 @@
 {
   "name": "trend-avatar-app",
   "version": "1.0.0",
-  "description": "A web application for analyzing trends and generating avatars",
+  "description": "AI-powered avatar generation for trending topics",
   "main": "dist/app.js",
   "scripts": {
     "start": "node dist/app.js",
-    "dev": "concurrently \"npx tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css --watch\" \"ts-node src/app.ts\"",
-    "build": "npx tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css && tsc",
-    "postinstall": "npm run build"
+    "dev": "concurrently \"npm run build:css:watch\" \"ts-node src/app.ts\"",
+    "build": "tsc",
+    "build:css": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css",
+    "build:css:watch": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css --watch",
+    "postinstall": "npm run build:css"
   },
   "repository": {
     "type": "git",
@@ -27,42 +29,32 @@
   },
   "homepage": "https://github.com/TommNum/clonex-trend-app#readme",
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "@material-tailwind/react": "^2.1.10",
-    "@types/axios": "^0.9.36",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^20.11.19",
-    "@types/uuid": "^10.0.0",
-    "autoprefixer": "^10.4.21",
-    "axios": "^1.8.4",
+    "axios": "^1.6.7",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "daisyui": "^5.0.9",
     "dotenv": "^16.4.5",
-    "ejs": "^3.1.9",
     "express": "^4.18.2",
     "express-session": "^1.18.0",
-    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "openai": "^4.28.0",
-    "passport": "^0.7.0",
-    "passport-twitter": "^1.0.4",
-    "postcss": "^8.5.3",
-    "sharp": "^0.33.2",
-    "tailwindcss": "^4.0.17",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
-    "uuid": "^11.1.0"
+    "node-cron": "^3.0.3",
+    "openai": "^4.28.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
-    "@types/express-session": "^1.18.1",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.17.10",
     "@types/multer": "^1.4.11",
-    "@types/passport": "^1.0.16",
-    "@types/passport-twitter": "^1.0.14",
-    "@types/sharp": "^0.32.0",
-    "concurrently": "^9.1.2"
+    "@types/node": "^20.11.19",
+    "@types/node-cron": "^3.0.11",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

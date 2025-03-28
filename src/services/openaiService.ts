@@ -19,115 +19,67 @@ export class OpenAIService {
   }
 
   // Analyze trend and media to determine if it's suitable for avatar swap
-  async analyzeTrendAndMedia(trend: PersonalizedTrend, searchResults: any): Promise<ProcessedTrend> {
-    const mediaItems = this.extractMediaFromSearchResults(searchResults);
-    
-    // Skip processing if no media items found
-    if (mediaItems.length === 0) {
-      return {
-        trendName: trend.trend_name,
-        mediaItems: [],
-        thematicDescription: "No media found for this trend",
-        processingSuitability: 0
-      };
-    }
-
-    const prompt = `
-      You are an expert media analyst. You need to analyze trending content on social media.
-      
-      Trend name: ${trend.trend_name}
-      Post count: ${trend.post_count}
-      Category: ${trend.category || 'Unknown'}
-      
-      This trend has ${mediaItems.length} media items associated with it.
-      
-      Analyze the following aspects:
-      1. Is there a clear thematic connection between the media items?
-      2. Is there a recognizable subject (person, character, object) in the media that could be replaced with a user's avatar?
-      3. Would this replacement make sense contextually and be humorous/engaging?
-      4. Rate the overall suitability of this trend for avatar replacement on a scale of 0-100.
-      
-      Media descriptions: ${JSON.stringify(mediaItems)}
-      
-      Provide a brief thematic description of what these media items represent and why they might be trending.
-      Format your response as JSON with the following structure:
-      {
-        "thematicDescription": "Description of the thematic elements",
-        "processingSuitability": <number between 0-100>,
-        "rationale": "Explanation for the suitability score"
-      }
-    `;
-
+  async analyzeTrendAndMedia(trend: PersonalizedTrend): Promise<ProcessedTrend> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{
-          role: "system",
-          content: "You are an expert media analyst who evaluates social media trends and their associated media."
-        }, {
-          role: "user",
-          content: prompt
-        }],
-        response_format: { type: "json_object" }
+      const prompt = `Analyze this trend: "${trend.trend_name}" with ${trend.post_count} posts. 
+      Determine if it's suitable for avatar swapping and provide a thematic description.`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [{ role: "user", content: prompt }],
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      
+      const analysis = completion.choices[0].message.content || '';
+      const suitability = this.calculateSuitability(analysis);
+
       return {
+        trendId: trend.id,
         trendName: trend.trend_name,
-        mediaItems,
-        thematicDescription: result.thematicDescription || "No description available",
-        processingSuitability: result.processingSuitability || 0
+        mediaItems: [],
+        thematicDescription: analysis,
+        processingSuitability: suitability
       };
     } catch (error) {
-      console.error('Error analyzing trend and media:', error);
-      return {
-        trendName: trend.trend_name,
-        mediaItems,
-        thematicDescription: "Error analyzing trend",
-        processingSuitability: 0
-      };
+      console.error('Error analyzing trend:', error);
+      throw new Error('Failed to analyze trend');
     }
   }
 
+  private calculateSuitability(analysis: string): number {
+    // Implement suitability calculation logic
+    return 75; // Placeholder value
+  }
+
   // Swap subject in media with user's avatar
-  async swapMediaWithAvatar(processedTrend: ProcessedTrend, searchResults: any[], userAvatarUrl: string): Promise<MediaSwapResult> {
-    if (searchResults.length === 0 || processedTrend.processingSuitability < 50) {
-      throw new Error('This trend is not suitable for avatar swapping');
+  async swapMediaWithAvatar(processedTrend: ProcessedTrend, avatarImage: Buffer): Promise<MediaSwapResult> {
+    if (!processedTrend.mediaItems || processedTrend.mediaItems.length === 0 || processedTrend.processingSuitability < 50) {
+      throw new Error('No suitable media found for processing');
     }
 
-    // Select the best media item for swapping
-    const selectedMedia = searchResults[0];
-    const originalMediaUrl = selectedMedia.mediaUrl;
+    const bestMedia = processedTrend.mediaItems[0];
+    const mediaResponse = await axios.get(bestMedia.mediaUrl, { responseType: 'arraybuffer' });
+    const mediaBuffer = Buffer.from(mediaResponse.data);
 
-    try {
-      // Download the original media
-      const response = await axios.get(originalMediaUrl, { responseType: 'arraybuffer' });
-      const mediaBuffer = Buffer.from(response.data);
+    const mask = await this.generateMask(mediaBuffer);
+    const caption = await this.generateCaption(processedTrend);
 
-      // Process the media with OpenAI
-      const result = await this.openai.images.edit({
-        image: mediaBuffer,
-        mask: await this.generateMask(mediaBuffer),
-        prompt: `Replace the main subject with a user's avatar image. The avatar should be seamlessly integrated into the scene.`,
-        n: 1,
-        size: "1024x1024"
-      });
+    const response = await this.openai.images.edit({
+      model: "dall-e-2",
+      image: mediaBuffer as any,
+      mask: mask as any,
+      prompt: `Replace the main subject in this image with the provided avatar while maintaining the same style and composition. The avatar should blend naturally with the background.`,
+      n: 1,
+      size: "1024x1024",
+    });
 
-      const modifiedMediaUrl = result.data[0].url;
+    const modifiedMediaUrl = response.data[0].url;
 
-      // Generate a caption for the post
-      const caption = await this.generateCaption(processedTrend);
-
-      return {
-        originalMediaUrl,
-        modifiedMediaUrl,
-        caption
-      };
-    } catch (error) {
-      console.error('Error swapping media with avatar:', error);
-      throw new Error('Failed to swap media with avatar');
-    }
+    return {
+      originalMediaUrl: bestMedia.mediaUrl,
+      modifiedMediaUrl,
+      caption,
+      url: modifiedMediaUrl
+    };
   }
 
   // Helper to extract media items from search results
@@ -164,6 +116,21 @@ export class OpenAIService {
     
     return mediaItems;
   }
-}
 
-export default new OpenAIService(); 
+  private async generateMask(imageBuffer: Buffer): Promise<Buffer> {
+    // Implement mask generation logic here
+    // For now, return a simple black rectangle as placeholder
+    return Buffer.from([]);
+  }
+
+  private async generateCaption(processedTrend: ProcessedTrend): Promise<string> {
+    const prompt = `Generate a witty caption for a social media post about the trend "${processedTrend.trendName}". The post should be engaging and relevant to the trend's theme: ${processedTrend.thematicDescription}`;
+    
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    return completion.choices[0].message.content || "Check out this trend!";
+  }
+} 

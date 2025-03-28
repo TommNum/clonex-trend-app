@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import multer from 'multer';
 import fs from 'fs';
+import cron from 'node-cron';
+import { ProcessedTrend } from './types';
 
 import authRoutes from './routes/auth';
 import trendRoutes from './routes/trends';
@@ -52,10 +54,28 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always use secure cookies in production
     maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: 'lax',
+    httpOnly: true,
+    domain: process.env.NODE_ENV === 'production' ? '.railway.app' : undefined
   },
+  proxy: true, // Trust the proxy
+  name: 'sessionId', // Explicitly set session name
+  rolling: true // Update session on every request
 }));
+
+// Trust proxy for secure cookies
+app.set('trust proxy', 1);
+
+// Add security headers
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -86,54 +106,41 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
-// Schedule trend analysis every 15 minutes
-const FIFTEEN_MINUTES = 15 * 60 * 1000;
-
-setInterval(async () => {
-  console.log("Running scheduled trend analysis...");
-  
+// Function to store processed trends
+async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
   try {
-    // Use system access token for automated tasks
+    // Here you would implement your storage logic
+    // For example, saving to a database or file
+    console.log(`Storing processed trend: ${processedTrend.trendName}`);
+  } catch (error) {
+    console.error('Error storing trend:', error);
+  }
+}
+
+// Schedule trend analysis
+cron.schedule('0 */4 * * *', async () => {
+  try {
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
     if (!systemAccessToken) {
-      console.error("System access token not configured");
+      console.error('System access token not configured');
       return;
     }
 
-    // Get trending topics from X API
     const trends = await xApiService.getTrendingTopics(systemAccessToken);
-    
-    // Filter trends with post count > 50
-    const relevantTrends = trends.filter(trend => trend.post_count > 50);
-    
-    // Process each relevant trend
-    for (const trend of relevantTrends) {
-      try {
-        // Analyze trend and get media
-        const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
-        const analysis = await openAIService.analyzeTrendAndMedia(trend, searchResults);
-        
-        // Log successful analysis
-        console.log(`Successfully analyzed trend: ${trend.name}`);
-        console.log(`Suitability score: ${analysis.processingSuitability}`);
-        
-        // If trend is suitable for processing, log it for manual review
-        if (analysis.processingSuitability >= 50) {
-          console.log(`Trend suitable for processing: ${trend.name}`);
-          console.log(`Thematic description: ${analysis.thematicDescription}`);
-        }
-      } catch (trendError) {
-        console.error(`Error processing trend ${trend.name}:`, trendError);
-        // Continue with next trend even if one fails
-        continue;
+    for (const trend of trends) {
+      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
+      const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
+      processedTrend.mediaItems = searchResults;
+
+      if (processedTrend.processingSuitability >= 75) {
+        // Store high-suitability trends for later processing
+        await storeTrend(processedTrend);
       }
     }
-    
-    console.log("Automated trend analysis completed");
   } catch (error) {
-    console.error("Error in automated trend analysis:", error);
+    console.error('Error in scheduled trend analysis:', error);
   }
-}, FIFTEEN_MINUTES);
+});
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

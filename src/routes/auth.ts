@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import * as authController from '../controllers/authController';
-import { isNotAuthenticated } from '../middleware/auth';
+import { isNotAuthenticated, checkSession } from '../middleware/auth';
 
 const router = Router();
+
+// Apply session check middleware to all auth routes
+router.use(checkSession);
 
 // Apply middleware to prevent authenticated users from accessing login
 router.use('/login', isNotAuthenticated);

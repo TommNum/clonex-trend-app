@@ -1,19 +1,21 @@
 export interface Trend {
+  id: string;
   name: string;
+  trend_name?: string;
   volume: number;
+  post_count?: number;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TrendAnalysis {
-  trendName: string;
-  mediaItems: MediaItem[];
-  thematicDescription: string;
+  trendId: string;
+  analysis: string;
+  mediaItems: TrendMedia[];
   processingSuitability: number;
-  analysis: {
-    theme: string;
-    sentiment: string;
-    keyElements: string[];
-    recommendedCaption: string;
-  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Avatar {
@@ -24,6 +26,7 @@ export interface Avatar {
 export interface User {
   id: string;
   username: string;
+  email?: string;
   profileImageUrl?: string;
   accessToken: string;
   refreshToken: string;
@@ -37,59 +40,86 @@ export interface AuthResponse {
 }
 
 export interface PersonalizedTrend {
-  trend_name: string;
+  id: string;
+  name: string;
+  query: string;
+  tweet_volume: number;
   post_count: number;
-  category?: string;
-  trending_since: string;
+  url: string;
+  trend_name?: string;
 }
 
 export interface TrendMedia {
   mediaUrl: string;
   type: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   altText?: string;
+  url?: string;
+  variants?: {
+    bitrate?: number;
+    content_type: string;
+    url: string;
+  }[];
 }
 
 export interface ProcessedTrend {
+  trendId: string;
   trendName: string;
   mediaItems: TrendMedia[];
   thematicDescription: string;
   processingSuitability: number;
+  analysis?: {
+    theme: string;
+    sentiment: string;
+    keyElements: string[];
+    recommendedCaption: string;
+  };
 }
 
 export interface MediaItem {
-  mediaUrl: string;
-  type: string;
-  width?: number;
-  height?: number;
-  altText?: string;
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  thumbnailUrl?: string;
+  createdAt: Date;
+  source: string;
 }
 
 export interface MediaSwapResult {
   originalMediaUrl: string;
   modifiedMediaUrl: string;
   caption: string;
+  url: string;
 }
 
 export interface XPostResult {
-  success: boolean;
-  postId?: string;
-  error?: string;
+  id: string;
+  text: string;
+  created_at: string;
 }
 
 export interface XSearchResult {
-  data: any[];
+  data: {
+    id: string;
+    text: string;
+    attachments?: {
+      media_keys: string[];
+    };
+  }[];
   includes?: {
-    media?: any[];
-    users?: any[];
-    places?: any[];
-    polls?: any[];
-  };
-  meta?: {
-    result_count: number;
-    newest_id?: string;
-    oldest_id?: string;
-    next_token?: string;
+    media: {
+      media_key: string;
+      type: string;
+      url: string;
+      preview_image_url?: string;
+      width: number;
+      height: number;
+      variants?: {
+        bit_rate?: number;
+        content_type: string;
+        url: string;
+      }[];
+    }[];
   };
 } 

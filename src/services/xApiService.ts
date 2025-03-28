@@ -7,16 +7,21 @@ export class XApiService {
   private clientId: string;
   private clientSecret: string;
   private callbackUrl: string;
+  private client: any;
 
   constructor() {
-    this.baseUrl = process.env.X_API_BASE_URL || 'https://api.twitter.com/1.1';
+    this.baseUrl = 'https://api.twitter.com/2';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
     this.callbackUrl = process.env.X_CALLBACK_URL || '';
+    this.client = axios.create({
+      baseURL: this.baseUrl,
+    });
   }
 
   // Generate OAuth 2.0 authorization URL with PKCE
   generateAuthUrl(): { url: string, codeVerifier: string } {
+    console.log('Generating auth URL with callback:', this.callbackUrl);
     const codeVerifier = crypto.randomBytes(32).toString('hex');
     const codeChallenge = crypto.createHash('sha256')
       .update(codeVerifier)
@@ -36,6 +41,7 @@ export class XApiService {
     authUrl.searchParams.append('code_challenge', codeChallenge);
     authUrl.searchParams.append('code_challenge_method', 'S256');
 
+    console.log('Generated auth URL:', authUrl.toString());
     return { url: authUrl.toString(), codeVerifier };
   }
 
@@ -45,6 +51,7 @@ export class XApiService {
     refreshToken: string;
     expiresIn: number;
   }> {
+    console.log('Exchanging code for tokens with callback:', this.callbackUrl);
     const params = new URLSearchParams();
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
@@ -53,12 +60,13 @@ export class XApiService {
     params.append('code_verifier', codeVerifier);
 
     try {
+      console.log('Making token request to X API');
       const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-
+      console.log('Token exchange successful');
       return {
         accessToken: response.data.access_token,
         refreshToken: response.data.refresh_token,
@@ -66,6 +74,10 @@ export class XApiService {
       };
     } catch (error) {
       console.error('Error exchanging code for tokens:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response data:', error.response?.data);
+        console.error('Response status:', error.response?.status);
+      }
       throw new Error('Failed to exchange code for tokens');
     }
   }
@@ -146,29 +158,23 @@ export class XApiService {
   }
 
   // Search for trend-related media
-  async searchTrendMedia(accessToken: string, trend: PersonalizedTrend): Promise<any[]> {
+  async searchTrendMedia(accessToken: string, trend: PersonalizedTrend): Promise<TrendMedia[]> {
     try {
-      const searchQuery = `${trend.name} has:media has:images filter:images min_retweets:100 min_faves:1000`;
-      const response = await axios.get(`${this.baseUrl}/search/tweets.json`, {
+      const searchQuery = `${trend.trend_name} has:media has:images filter:images min_retweets:100 min_faves:1000`;
+      const response = await this.client.get('tweets/search/recent', {
         params: {
-          q: searchQuery,
-          count: 100,
-          result_type: 'popular',
-          include_entities: true
+          query: searchQuery,
+          'tweet.fields': 'attachments,entities,media',
+          'media.fields': 'url,preview_image_url,width,height,variants',
+          expansions: 'attachments.media_keys',
         },
         headers: this.getHeaders(accessToken)
       });
 
-      return response.data.statuses
-        .filter((tweet: any) => tweet.entities?.media?.length > 0)
-        .map((tweet: any) => ({
-          media_url: tweet.entities.media[0].media_url_https,
-          tweet_id: tweet.id_str,
-          engagement: tweet.retweet_count + tweet.favorite_count
-        }));
+      return this.processMediaItems(response.data);
     } catch (error) {
-      console.error('Error searching media:', error);
-      throw error;
+      console.error('Error searching trend media:', error);
+      return [];
     }
   }
 
@@ -194,36 +200,31 @@ export class XApiService {
   }
 
   // Upload media to X
-  async uploadMedia(accessToken: string, mediaUrl: string): Promise<string> {
+  async uploadMedia(accessToken: string, mediaBuffer: Buffer): Promise<string> {
     try {
-      const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-      const mediaBuffer = Buffer.from(response.data);
-      const mimeType = response.headers['content-type'] || 'image/jpeg';
-
       const formData = new FormData();
-      formData.append('media', mediaBuffer, 'media.jpg');
+      const blob = new Blob([mediaBuffer], { type: 'image/jpeg' });
+      formData.append('media', blob, 'media.jpg');
 
-      const uploadResponse = await axios.post(
-        `${this.baseUrl}/media/upload.json`,
-        formData,
-        {
-          headers: {
-            ...this.getHeaders(accessToken),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
+      const response = await this.client.post('media/upload', formData, {
+        headers: {
+          ...this.getHeaders(accessToken),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      return uploadResponse.data.media_id_string;
+      return response.data.media_id_string;
     } catch (error) {
       console.error('Error uploading media:', error);
-      throw error;
+      throw new Error('Failed to upload media');
     }
   }
 
   async exchangeCodeForToken(code: string, codeVerifier: string): Promise<{
     id: string;
     username: string;
+    email?: string;
+    profileImageUrl?: string;
     accessToken: string;
     refreshToken: string;
     tokenExpiry: number;
@@ -234,6 +235,7 @@ export class XApiService {
     return {
       id: userInfo.id,
       username: userInfo.username,
+      profileImageUrl: userInfo.profileImageUrl,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       tokenExpiry: Math.floor(Date.now() / 1000) + tokens.expiresIn
@@ -255,8 +257,13 @@ export class XApiService {
   private getHeaders(accessToken: string) {
     return {
       Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
+  }
+
+  private processMediaItems(data: any): TrendMedia[] {
+    // Implementation of media processing
+    return [];
   }
 }
 
