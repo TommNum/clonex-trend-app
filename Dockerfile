@@ -11,18 +11,18 @@ RUN apt-get update && \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Create necessary directories and initialize CSS file
+RUN mkdir -p public/css && \
+    echo '@tailwind base;\n@tailwind components;\n@tailwind utilities;' > public/css/style.css
+
 # Install npm dependencies
 COPY package*.json ./
 RUN npm install -g npm@10.8.2 && \
     npm cache clean --force && \
     npm install --no-audit --no-fund --legacy-peer-deps
 
-# Create necessary directories and copy source files
+# Copy source code
 COPY . .
-RUN mkdir -p public/css
-
-# Ensure style.css exists with content
-RUN echo '@tailwind base;\n@tailwind components;\n@tailwind utilities;' > public/css/style.css
 
 # Build TypeScript and CSS
 RUN npm run build:css && \
