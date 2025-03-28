@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AI-powered avatar generation for trending topics",
   "main": "dist/app.js",
+  "type": "module",
   "scripts": {
     "start": "node dist/app.js",
     "dev": "concurrently \"npm run build:css:watch\" \"ts-node src/app.ts\"",
@@ -23,7 +24,6 @@
   ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/TommNum/clonex-trend-app/issues"
   },
