@@ -9,6 +9,8 @@ import fs from 'fs';
 
 import authRoutes from './routes/auth';
 import trendRoutes from './routes/trends';
+import { XApiService } from './services/xApiService';
+import { OpenAIService } from './services/openaiService';
 
 // Load environment variables
 dotenv.config();
@@ -16,6 +18,10 @@ dotenv.config();
 // Create Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize services
+const xApiService = new XApiService();
+const openAIService = new OpenAIService();
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -79,24 +85,52 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
+// Schedule trend analysis every 15 minutes
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+setInterval(async () => {
+  console.log("Running scheduled trend analysis...");
+  
+  try {
+    // Get trending topics from X API
+    const trends = await xApiService.getTrendingTopics();
+    
+    // Filter trends with post count > 50
+    const relevantTrends = trends.filter(trend => trend.post_count > 50);
+    
+    // Process each relevant trend
+    for (const trend of relevantTrends) {
+      try {
+        // Analyze trend and get media
+        const searchResults = await xApiService.searchTrendMedia(req.user.accessToken, trend);
+        const analysis = await openAIService.analyzeTrendAndMedia(trend, searchResults);
+        
+        // Log successful analysis
+        console.log(`Successfully analyzed trend: ${trend.name}`);
+        console.log(`Suitability score: ${analysis.processingSuitability}`);
+        
+        // If trend is suitable for processing, log it for manual review
+        if (analysis.processingSuitability >= 50) {
+          console.log(`Trend suitable for processing: ${trend.name}`);
+          console.log(`Thematic description: ${analysis.thematicDescription}`);
+        }
+      } catch (trendError) {
+        console.error(`Error processing trend ${trend.name}:`, trendError);
+        // Continue with next trend even if one fails
+        continue;
+      }
+    }
+    
+    console.log("Automated trend analysis completed");
+  } catch (error) {
+    console.error("Error in automated trend analysis:", error);
+  }
+}, FIFTEEN_MINUTES);
+
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  
-  // Handle specific error types
-  if (err.name === 'UnauthorizedError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized access'
-    });
-  }
-
-  // Default error response
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  console.error('Error:', err);
+  return res.status(500).json({ error: err.message });
 });
 
 // 404 handler

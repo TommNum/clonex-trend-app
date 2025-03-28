@@ -18,281 +18,145 @@ const writeFileAsync = promisify(fs.writeFile);
 // Get trending data for user
 export const getTrends = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized' 
-      });
-    }
-
     const trends = await XApiService.getPersonalizedTrends(req.user.accessToken);
-    
-    // Filter trends with post count > 50
-    const significantTrends = trends.filter(trend => trend.post_count > 50);
-    
-    res.json({ 
-      success: true,
-      data: { trends: significantTrends }
-    });
+    return res.json({ trends });
   } catch (error) {
     console.error('Error fetching trends:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch trends',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Failed to fetch trends' });
   }
 };
 
 // Analyze a specific trend
 export const analyzeTrend = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized' 
-      });
-    }
-
     const { trendId } = req.params;
-    
-    // Get all trends first
     const trends = await XApiService.getPersonalizedTrends(req.user.accessToken);
-    const trend = trends.find(t => t.trend_name === trendId);
+    const trend = trends.find(t => t.id === trendId);
     
     if (!trend) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Trend not found' 
-      });
+      return res.status(404).json({ error: 'Trend not found' });
     }
 
-    // Search for media related to the trend
     const searchResults = await XApiService.searchTrendMedia(req.user.accessToken, trend);
-    
-    // Analyze with OpenAI
     const analysis = await OpenAIService.analyzeTrendAndMedia(trend, searchResults);
-    
-    res.json({ 
-      success: true,
-      data: { analysis }
-    });
+    return res.json({ analysis });
   } catch (error) {
     console.error('Error analyzing trend:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to analyze trend',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Failed to analyze trend' });
   }
 };
 
 // Process media swap for a trend
 export const processMediaSwap = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized' 
-      });
-    }
-
     if (!req.user.profileImageUrl) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'User profile image URL is required' 
-      });
+      return res.status(400).json({ error: 'User profile image not found' });
     }
 
-    const { trendName } = req.params;
-    
-    // Get all trends first
+    const { trendId } = req.params;
     const trends = await XApiService.getPersonalizedTrends(req.user.accessToken);
-    const trend = trends.find(t => t.trend_name === trendName);
+    const trend = trends.find(t => t.id === trendId);
     
     if (!trend) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Trend not found' 
-      });
+      return res.status(404).json({ error: 'Trend not found' });
     }
 
-    // Search for media related to the trend
     const searchResults = await XApiService.searchTrendMedia(req.user.accessToken, trend);
-    
-    // Analyze with OpenAI
-    const analysis = await OpenAIService.analyzeTrendAndMedia(trend, searchResults);
-    
-    if (analysis.processingSuitability < 50) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'This trend is not suitable for avatar swapping',
-        data: { analysis } 
-      });
-    }
-
-    // Process media swap
-    const swapResult = await OpenAIService.swapMediaWithAvatar(
-      analysis,
-      req.user.profileImageUrl
-    );
-    
-    res.json({ 
-      success: true,
-      data: { result: swapResult }
-    });
+    const processedTrend: ProcessedTrend = {
+      trendId: trend.id,
+      trendName: trend.name,
+      processingSuitability: 0, // Will be set by analyzeTrendAndMedia
+      suggestedCaption: '',
+      mediaUrl: ''
+    };
+    const swappedMedia = await OpenAIService.swapMediaWithAvatar(processedTrend, searchResults, req.user.profileImageUrl!);
+    return res.json({ swappedMedia });
   } catch (error) {
     console.error('Error processing media swap:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to process media swap',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Failed to process media swap' });
   }
 };
 
 // Post media to X
 export const postToX = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized' 
-      });
+    const { mediaUrl, caption } = req.body;
+
+    if (!mediaUrl || !caption) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const { caption, mediaUrl } = req.body;
-    
-    if (!caption || !mediaUrl) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Caption and media URL are required' 
-      });
-    }
-
-    // Download the media
-    const mediaResponse = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-    const mediaBuffer = Buffer.from(mediaResponse.data, 'binary');
-    
-    // Upload media to X
     const mediaId = await XApiService.uploadMedia(
       req.user.accessToken,
-      mediaBuffer,
-      'image/jpeg'
+      mediaUrl
     );
-    
-    // Post tweet with media
+
     const tweetId = await XApiService.postTweet(
       req.user.accessToken,
       caption,
-      [mediaId]
+      mediaId
     );
-    
-    res.json({ 
+
+    return res.json({
       success: true,
-      data: {
-        tweetId,
-        tweetUrl: `https://x.com/${req.user.username}/status/${tweetId}`
-      }
+      tweetUrl: `https://x.com/${req.user.username}/status/${tweetId}`
     });
   } catch (error) {
     console.error('Error posting to X:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to post to X',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Failed to post to X' });
   }
 };
 
 // Process automated trend analysis and posting
 export const autoProcessTrend = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized' 
-      });
-    }
-
     if (!req.user.profileImageUrl) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'User profile image URL is required' 
-      });
+      return res.status(400).json({ error: 'User profile image not found' });
     }
 
-    // 1. Get personalized trends
+    const { trendId } = req.params;
     const trends = await XApiService.getPersonalizedTrends(req.user.accessToken);
+    const trend = trends.find(t => t.id === trendId);
     
-    // 2. Filter trends with post count > 50
-    const significantTrends = trends.filter(trend => trend.post_count > 50);
-    
-    if (significantTrends.length === 0) {
-      return res.json({ 
-        success: true,
-        message: 'No significant trends found' 
-      });
+    if (!trend) {
+      return res.status(404).json({ error: 'Trend not found' });
     }
-    
-    // 3. Analyze each trend until we find a suitable one
-    let suitableTrend: ProcessedTrend | null = null;
-    let searchResults: XSearchResult | null = null;
-    
-    for (const trend of significantTrends.slice(0, 3)) { // Limit to top 3 for efficiency
+
+    let searchResults;
+    try {
       searchResults = await XApiService.searchTrendMedia(req.user.accessToken, trend);
-      const analysis = await OpenAIService.analyzeTrendAndMedia(trend, searchResults);
-      
-      if (analysis.processingSuitability >= 70) {
-        suitableTrend = analysis;
-        break;
-      }
+    } catch (error) {
+      console.error('Error searching trend media:', error);
+      return res.status(500).json({ error: 'Failed to search trend media' });
     }
-    
-    if (!suitableTrend) {
-      return res.json({ 
-        success: true,
-        message: 'No suitable trends found for avatar swapping' 
-      });
-    }
-    
-    // 4. Process media swap
-    const swapResult = await OpenAIService.swapMediaWithAvatar(
-      suitableTrend,
-      req.user.profileImageUrl
-    );
-    
-    // 5. Post to X
-    const mediaResponse = await axios.get(swapResult.modifiedMediaUrl, { responseType: 'arraybuffer' });
-    const mediaBuffer = Buffer.from(mediaResponse.data, 'binary');
-    
+
+    const processedTrend: ProcessedTrend = {
+      trendId: trend.id,
+      trendName: trend.name,
+      processingSuitability: 0, // Will be set by analyzeTrendAndMedia
+      suggestedCaption: '',
+      mediaUrl: ''
+    };
+    const swappedMedia = await OpenAIService.swapMediaWithAvatar(processedTrend, searchResults, req.user.profileImageUrl!);
+
     const mediaId = await XApiService.uploadMedia(
       req.user.accessToken,
-      mediaBuffer,
-      'image/jpeg'
+      swappedMedia.url
     );
-    
+
     const tweetId = await XApiService.postTweet(
       req.user.accessToken,
-      swapResult.caption,
-      [mediaId]
+      swappedMedia.caption,
+      mediaId
     );
-    
-    res.json({
+
+    return res.json({
       success: true,
-      data: {
-        tweetId,
-        tweetUrl: `https://x.com/${req.user.username}/status/${tweetId}`,
-        trendUsed: suitableTrend.trendName,
-        caption: swapResult.caption
-      }
+      tweetUrl: `https://x.com/${req.user.username}/status/${tweetId}`,
+      media: swappedMedia
     });
   } catch (error) {
-    console.error('Error in auto-processing trend:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to auto-process trend',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Error in auto process:', error);
+    return res.status(500).json({ error: 'Failed to auto process trend' });
   }
 }; 

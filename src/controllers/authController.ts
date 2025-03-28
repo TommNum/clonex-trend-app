@@ -15,84 +15,47 @@ export const login = (req: Request, res: Response) => {
 };
 
 export const callback = async (req: Request, res: Response) => {
-  const { code, state } = req.query;
-  const codeVerifier = req.session.codeVerifier;
-  
-  if (!code || !codeVerifier) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid request: Missing code or code verifier'
-    });
-  }
-
   try {
-    // Exchange code for tokens
-    const { accessToken, refreshToken, expiresIn } = await XApiService.getTokens(
-      code as string,
-      codeVerifier
-    );
+    const { code } = req.query;
+    const { codeVerifier } = req.session;
 
-    // Get user info
-    const userInfo = await XApiService.getUserInfo(accessToken);
+    if (!code || !codeVerifier) {
+      return res.status(400).json({ error: 'Missing code or code verifier' });
+    }
 
-    // Create user object
+    const userInfo = await XApiService.exchangeCodeForToken(code.toString(), codeVerifier);
+
     const user: User = {
       id: userInfo.id,
       username: userInfo.username,
-      accessToken,
+      accessToken: userInfo.accessToken,
+      refreshToken: userInfo.refreshToken,
+      tokenExpiry: userInfo.tokenExpiry,
       role: 'user'
     };
 
-    // Generate JWT token
-    const token = authMiddleware.generateToken(user);
-
-    // Store user info and tokens in session
     req.session.user = {
-      id: userInfo.id,
-      username: userInfo.username,
-      accessToken,
-      refreshToken,
-      tokenExpiry: Math.floor(Date.now() / 1000) + expiresIn
+      accessToken: userInfo.accessToken,
+      refreshToken: userInfo.refreshToken,
+      tokenExpiry: userInfo.tokenExpiry,
+      userId: userInfo.id,
+      username: userInfo.username
     };
 
-    // Return both JWT token and user info
-    const response: AuthResponse = {
-      token,
-      user
-    };
-
-    // Store response in session for client-side access
-    req.session.authResponse = response;
-
-    // Redirect to dashboard
-    res.redirect('/dashboard');
+    return res.redirect('/dashboard');
   } catch (error) {
-    console.error('Auth callback error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Authentication failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Error in callback:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
 };
 
 export const logout = (req: Request, res: Response) => {
-  // Clear session
   req.session.destroy((err) => {
     if (err) {
-      console.error('Logout error:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'Error during logout',
-        error: err.message
-      });
+      console.error('Error destroying session:', err);
+      return res.status(500).json({ error: 'Logout failed' });
     }
-
-    // Clear any client-side tokens
-    res.clearCookie('token');
-    
-    // Redirect to home page
-    res.redirect('/');
+    return res.redirect('/');
   });
 };
 
@@ -107,6 +70,8 @@ export const jwtLogin = async (req: Request, res: Response) => {
         id: 'demo-user',
         username,
         accessToken: 'demo-token',
+        refreshToken: 'demo-refresh-token',
+        tokenExpiry: Math.floor(Date.now() / 1000) + 3600,
         role: 'user'
       };
 
@@ -136,16 +101,7 @@ export const jwtLogin = async (req: Request, res: Response) => {
 // Get current user info
 export const getCurrentUser = (req: Request, res: Response) => {
   if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'User not authenticated'
-    });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
-
-  res.json({
-    success: true,
-    data: {
-      user: req.user
-    }
-  });
+  return res.json(req.user);
 }; 

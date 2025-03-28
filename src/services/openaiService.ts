@@ -91,26 +91,26 @@ export class OpenAIService {
   }
 
   // Swap subject in media with user's avatar
-  async swapMediaWithAvatar(processedTrend: ProcessedTrend, userAvatarUrl: string): Promise<MediaSwapResult> {
-    if (processedTrend.mediaItems.length === 0 || processedTrend.processingSuitability < 50) {
+  async swapMediaWithAvatar(processedTrend: ProcessedTrend, searchResults: any[], userAvatarUrl: string): Promise<MediaSwapResult> {
+    if (searchResults.length === 0 || processedTrend.processingSuitability < 50) {
       throw new Error('This trend is not suitable for avatar swapping');
     }
 
     // Select the best media item for swapping
-    const selectedMedia = processedTrend.mediaItems[0];
+    const selectedMedia = searchResults[0];
     
     try {
+      // Download the media
+      const mediaResponse = await axios.get(selectedMedia.media_url, { responseType: 'arraybuffer' });
+      const mediaBuffer = Buffer.from(mediaResponse.data, 'binary');
+      const mediaPath = path.join(__dirname, '../../public/uploads', `media-${uuidv4()}.jpg`);
+      await writeFileAsync(mediaPath, mediaBuffer);
+
       // Download the user's avatar
       const avatarResponse = await axios.get(userAvatarUrl, { responseType: 'arraybuffer' });
       const avatarBuffer = Buffer.from(avatarResponse.data, 'binary');
       const avatarPath = path.join(__dirname, '../../public/uploads', `avatar-${uuidv4()}.jpg`);
       await writeFileAsync(avatarPath, avatarBuffer);
-
-      // Download the media
-      const mediaResponse = await axios.get(selectedMedia.mediaUrl, { responseType: 'arraybuffer' });
-      const mediaBuffer = Buffer.from(mediaResponse.data, 'binary');
-      const mediaPath = path.join(__dirname, '../../public/uploads', `media-${uuidv4()}.jpg`);
-      await writeFileAsync(mediaPath, mediaBuffer);
 
       // Analyze the image with GPT-4 Vision
       const visionPrompt = `

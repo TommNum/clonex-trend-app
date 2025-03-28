@@ -3,11 +3,13 @@ import crypto from 'crypto';
 import { User, PersonalizedTrend, TrendMedia } from '../types';
 
 export class XApiService {
+  private baseUrl: string;
   private clientId: string;
   private clientSecret: string;
   private callbackUrl: string;
 
   constructor() {
+    this.baseUrl = process.env.X_API_BASE_URL || 'https://api.twitter.com/1.1';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
     this.callbackUrl = process.env.X_CALLBACK_URL || '';
@@ -125,121 +127,136 @@ export class XApiService {
   // Get personalized trends for user
   async getPersonalizedTrends(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get('https://api.x.com/2/users/personalized_trends', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        params: {
-          'personalized_trend.fields': 'category,post_count,trend_name,trending_since',
-        },
+      const response = await axios.get(`${this.baseUrl}/trends/place.json?id=1`, {
+        headers: this.getHeaders(accessToken)
       });
 
-      return response.data.data;
+      return response.data[0].trends.map((trend: any) => ({
+        id: trend.query.replace(/^#/, ''),
+        name: trend.name,
+        query: trend.query,
+        tweet_volume: trend.tweet_volume || 0,
+        post_count: trend.tweet_volume || 0,
+        url: trend.url
+      }));
     } catch (error) {
-      console.error('Error fetching personalized trends:', error);
-      throw new Error('Failed to fetch personalized trends');
+      console.error('Error fetching trends:', error);
+      throw error;
     }
   }
 
   // Search for trend-related media
-  async searchTrendMedia(accessToken: string, trend: PersonalizedTrend): Promise<any> {
+  async searchTrendMedia(accessToken: string, trend: PersonalizedTrend): Promise<any[]> {
     try {
-      const searchQuery = `${trend.trend_name} since_id:${trend.trending_since} has:media has:images filter:images min_retweets:100 min_faves:1000`;
-      
-      const response = await axios.get('https://api.x.com/2/tweets/search/recent', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+      const searchQuery = `${trend.name} has:media has:images filter:images min_retweets:100 min_faves:1000`;
+      const response = await axios.get(`${this.baseUrl}/search/tweets.json`, {
         params: {
-          'query': searchQuery,
-          'tweet.fields': 'public_metrics,attachments,entities,created_at,author_id',
-          'media.fields': 'url,preview_image_url,alt_text,type,width,height',
-          'expansions': 'attachments.media_keys,author_id',
-          'user.fields': 'profile_image_url,username',
-          'max_results': 25,
+          q: searchQuery,
+          count: 100,
+          result_type: 'popular',
+          include_entities: true
         },
+        headers: this.getHeaders(accessToken)
       });
 
-      return response.data;
+      return response.data.statuses
+        .filter((tweet: any) => tweet.entities?.media?.length > 0)
+        .map((tweet: any) => ({
+          media_url: tweet.entities.media[0].media_url_https,
+          tweet_id: tweet.id_str,
+          engagement: tweet.retweet_count + tweet.favorite_count
+        }));
     } catch (error) {
-      console.error('Error searching trend media:', error);
-      throw new Error('Failed to search for trend media');
+      console.error('Error searching media:', error);
+      throw error;
     }
   }
 
   // Post a tweet with media
-  async postTweet(accessToken: string, text: string, mediaIds: string[]): Promise<string> {
+  async postTweet(accessToken: string, text: string, mediaId: string): Promise<string> {
     try {
-      const payload: any = { text };
-      
-      if (mediaIds && mediaIds.length > 0) {
-        payload.media = { media_ids: mediaIds };
-      }
-      
-      const response = await axios.post('https://api.x.com/2/tweets', payload, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        `${this.baseUrl}/statuses/update.json`,
+        {
+          status: text,
+          media_ids: [mediaId]
         },
-      });
+        {
+          headers: this.getHeaders(accessToken)
+        }
+      );
 
-      return response.data.data.id;
+      return response.data.id_str;
     } catch (error) {
       console.error('Error posting tweet:', error);
-      throw new Error('Failed to post tweet');
+      throw error;
     }
   }
 
   // Upload media to X
-  async uploadMedia(accessToken: string, mediaBuffer: Buffer, mimeType: string): Promise<string> {
+  async uploadMedia(accessToken: string, mediaUrl: string): Promise<string> {
     try {
-      // Initialize upload
-      const initResponse = await axios.post('https://upload.x.com/1.1/media/upload.json', {
-        command: 'INIT',
-        total_bytes: mediaBuffer.length,
-        media_type: mimeType,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
+      const mediaBuffer = Buffer.from(response.data);
+      const mimeType = response.headers['content-type'] || 'image/jpeg';
 
-      const mediaId = initResponse.data.media_id_string;
+      const formData = new FormData();
+      formData.append('media', mediaBuffer, 'media.jpg');
 
-      // Upload media in chunks
-      const chunkSize = 1000000; // 1MB chunks
-      for (let i = 0; i < mediaBuffer.length; i += chunkSize) {
-        const chunk = mediaBuffer.slice(i, i + chunkSize);
-        await axios.post('https://upload.x.com/1.1/media/upload.json', {
-          command: 'APPEND',
-          media_id: mediaId,
-          segment_index: Math.floor(i / chunkSize),
-          media_data: chunk.toString('base64'),
-        }, {
+      const uploadResponse = await axios.post(
+        `${this.baseUrl}/media/upload.json`,
+        formData,
+        {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
+            ...this.getHeaders(accessToken),
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
 
-      // Finalize upload
-      await axios.post('https://upload.x.com/1.1/media/upload.json', {
-        command: 'FINALIZE',
-        media_id: mediaId,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      return mediaId;
+      return uploadResponse.data.media_id_string;
     } catch (error) {
       console.error('Error uploading media:', error);
-      throw new Error('Failed to upload media');
+      throw error;
     }
+  }
+
+  async exchangeCodeForToken(code: string, codeVerifier: string): Promise<{
+    id: string;
+    username: string;
+    accessToken: string;
+    refreshToken: string;
+    tokenExpiry: number;
+  }> {
+    const tokens = await this.getTokens(code, codeVerifier);
+    const userInfo = await this.getUserInfo(tokens.accessToken);
+    
+    return {
+      id: userInfo.id,
+      username: userInfo.username,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      tokenExpiry: Math.floor(Date.now() / 1000) + tokens.expiresIn
+    };
+  }
+
+  async getTrendingTopics(accessToken: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/trends/place.json?id=1`, {
+        headers: this.getHeaders(accessToken)
+      });
+      return response.data[0].trends;
+    } catch (error) {
+      console.error('Error fetching trending topics:', error);
+      throw error;
+    }
+  }
+
+  private getHeaders(accessToken: string) {
+    return {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    };
   }
 }
 

@@ -24,9 +24,11 @@ export interface Avatar {
 export interface User {
   id: string;
   username: string;
-  accessToken: string;
-  role: 'user' | 'admin';
   profileImageUrl?: string;
+  accessToken: string;
+  refreshToken: string;
+  tokenExpiry: number;
+  role?: string;
 }
 
 export interface AuthResponse {
@@ -35,10 +37,12 @@ export interface AuthResponse {
 }
 
 export interface PersonalizedTrend {
-  trend_name: string;
+  id: string;
+  name: string;
+  query: string;
+  tweet_volume: number;
   post_count: number;
-  category?: string;
-  trending_since?: string;
+  url?: string;
 }
 
 export interface TrendMedia {
@@ -50,10 +54,11 @@ export interface TrendMedia {
 }
 
 export interface ProcessedTrend {
+  trendId: string;
   trendName: string;
-  mediaItems: MediaItem[];
-  thematicDescription: string;
   processingSuitability: number;
+  suggestedCaption: string;
+  mediaUrl: string;
 }
 
 export interface MediaItem {
@@ -65,9 +70,13 @@ export interface MediaItem {
 }
 
 export interface MediaSwapResult {
-  originalMediaUrl: string;
-  modifiedMediaUrl: string;
+  url: string;
   caption: string;
+  metadata: {
+    originalMediaUrl: string;
+    processingTime: number;
+    aiModel: string;
+  };
 }
 
 export interface XPostResult {

@@ -2,30 +2,38 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import XApiService from '../services/xApiService';
 import { User } from '../types';
+import { Session, SessionData } from 'express-session';
+
+declare module 'express-session' {
+  interface SessionData {
+    user?: {
+      accessToken: string;
+      refreshToken: string;
+      tokenExpiry: number;
+      userId: string;
+      username: string;
+    };
+    codeVerifier?: string;
+    authResponse?: {
+      token: string;
+      user: User;
+    };
+  }
+}
 
 // Extend Express Request type to include user and session
 declare global {
   namespace Express {
     interface Request {
       user?: User;
-      isAuthenticated?: boolean;
-      session: {
-        user?: {
-          accessToken: string;
-          refreshToken: string;
-          tokenExpiry: number;
-          userId: string;
-          username: string;
-        };
-        codeVerifier?: string;
-        authResponse?: {
-          token: string;
-          user: User;
-        };
-        destroy: (callback: (err?: Error) => void) => void;
-      };
+      session: Session & Partial<SessionData>;
+      isAuthenticated(): this is AuthenticatedRequest;
     }
   }
+}
+
+interface AuthenticatedRequest extends Request {
+  user: User;
 }
 
 export class AuthMiddleware {
@@ -59,7 +67,9 @@ export class AuthMiddleware {
         try {
           const decoded = jwt.verify(token, this.JWT_SECRET) as User;
           req.user = decoded;
-          req.isAuthenticated = true;
+          req.isAuthenticated = function(): this is AuthenticatedRequest {
+            return true;
+          };
           return next();
         } catch (error) {
           // If JWT fails, try X authentication
@@ -93,9 +103,13 @@ export class AuthMiddleware {
         id: user.userId,
         username: user.username,
         accessToken: user.accessToken,
+        refreshToken: user.refreshToken,
+        tokenExpiry: user.tokenExpiry,
         role: 'user' as const
       };
-      req.isAuthenticated = true;
+      req.isAuthenticated = function(): this is AuthenticatedRequest {
+        return true;
+      };
       next();
     } catch (error) {
       console.error('Authentication error:', error);
@@ -108,76 +122,67 @@ export class AuthMiddleware {
 
   // Generate JWT token
   public generateToken = (user: User): string => {
-    return jwt.sign(user, this.JWT_SECRET, {
-      expiresIn: this.JWT_EXPIRES_IN
-    } as jwt.SignOptions);
+    return jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        accessToken: user.accessToken,
+        refreshToken: user.refreshToken,
+        tokenExpiry: user.tokenExpiry,
+        role: user.role || 'user'
+      },
+      this.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
   };
 
   // Verify JWT token
   public verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const token = this.extractTokenFromHeader(req);
-      
+      const token = req.headers.authorization?.split(' ')[1];
+
       if (!token) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Authentication token is required' 
-        });
+        return res.status(401).json({ error: 'No token provided' });
       }
 
       const decoded = jwt.verify(token, this.JWT_SECRET) as User;
       req.user = decoded;
-      req.isAuthenticated = true;
-      next();
+      return next();
     } catch (error) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid or expired token' 
-      });
+      console.error('Token verification error:', error);
+      return res.status(401).json({ error: 'Invalid token' });
     }
   };
 
   // Check if user has required role
-  public checkRole = (requiredRole: User['role']) => {
+  public requireRole = (requiredRole: string) => {
     return (req: Request, res: Response, next: NextFunction) => {
       if (!req.user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'User not authenticated' 
-        });
+        return res.status(401).json({ error: 'Not authenticated' });
       }
 
       if (req.user.role !== requiredRole) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Insufficient permissions' 
-        });
+        return res.status(403).json({ error: 'Insufficient permissions' });
       }
 
-      next();
+      return next();
     };
   };
 
   // Check if user is authenticated
   public isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
-      });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
-    next();
+    return next();
   };
 
   // Check if user is not authenticated (for login/register routes)
   public isNotAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'User already authenticated' 
-      });
+    if (req.user) {
+      return res.status(403).json({ error: 'Already authenticated' });
     }
-    next();
+    return next();
   };
 
   // Rate limiting middleware
@@ -222,6 +227,16 @@ export class AuthMiddleware {
     const [type, token] = authHeader.split(' ');
     return type === 'Bearer' ? token : null;
   }
+
+  public validateRequest = (schema: any) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const { error } = schema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+      return next();
+    };
+  };
 }
 
 // Export singleton instance
@@ -231,9 +246,10 @@ export const authMiddleware = AuthMiddleware.getInstance();
 export const {
   authenticate,
   verifyToken,
-  checkRole,
+  requireRole,
   isAuthenticated,
   isNotAuthenticated,
   rateLimit,
-  generateToken
+  generateToken,
+  validateRequest
 } = authMiddleware; 

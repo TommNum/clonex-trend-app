@@ -16,4 +16,18 @@ declare module 'express-session' {
       user: User;
     };
   }
+}
+
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      username: string;
+      profileImageUrl?: string;
+      accessToken: string;
+      refreshToken: string;
+      tokenExpiry: number;
+      role?: string;
+    }
+  }
 } 
