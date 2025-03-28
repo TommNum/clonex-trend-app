@@ -3,13 +3,13 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
+# First copy both package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
-# Copy source code
+# Copy source code and other necessary files
 COPY . .
 
 # Create necessary directories

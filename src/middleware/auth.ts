@@ -14,7 +14,7 @@ declare module 'express-session' {
       accessToken: string;
       refreshToken: string;
       tokenExpiry: number;
-      role?: string;
+      role: 'user' | 'admin';
     };
     codeVerifier?: string;
     authResponse?: {
