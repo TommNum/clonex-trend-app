@@ -3,11 +3,12 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# First copy both package files
+# Install dependencies first
 COPY package*.json ./
 
-# Install dependencies with npm install instead of npm ci
-RUN npm install --production=false
+# Install dependencies with specific npm version and flags
+RUN npm install -g npm@10.8.2 && \
+    npm install --legacy-peer-deps
 
 # Copy source code and other necessary files
 COPY . .

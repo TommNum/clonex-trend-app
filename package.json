@@ -9,7 +9,8 @@
     "build": "tsc",
     "build:css": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css",
     "build:css:watch": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css --watch",
-    "postinstall": "npm run build:css && npm run build"
+    "postinstall": "npm run build:css && npm run build",
+    "prebuild": "npm run build:css"
   },
   "repository": {
     "type": "git",

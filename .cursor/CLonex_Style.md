@@ -8,13 +8,13 @@ Neon Purple: #9D4EDD
 Typography
 The app uses a combination of fonts:
 
-Inter (main body text)
-Syncopate (headings)
-Archivo Black (fallback for headings)
-Design Components
+- Inter (main body text)
+- Syncopate (headings)
+- Archivo Black (fallback for headings)
+- Design Components
 The application uses glassmorphism effects, gradient borders, and other design patterns:
 
-Glass cards with backdrop blur
+    Glass cards with backdrop blur
 Gradient borders and text
 Neon effects for buttons and interactive elements
 Premium and standard UI variants
