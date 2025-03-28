@@ -93,8 +93,15 @@ setInterval(async () => {
   console.log("Running scheduled trend analysis...");
   
   try {
+    // Use system access token for automated tasks
+    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
+    if (!systemAccessToken) {
+      console.error("System access token not configured");
+      return;
+    }
+
     // Get trending topics from X API
-    const trends = await xApiService.getTrendingTopics();
+    const trends = await xApiService.getTrendingTopics(systemAccessToken);
     
     // Filter trends with post count > 50
     const relevantTrends = trends.filter(trend => trend.post_count > 50);
@@ -103,7 +110,7 @@ setInterval(async () => {
     for (const trend of relevantTrends) {
       try {
         // Analyze trend and get media
-        const searchResults = await xApiService.searchTrendMedia(req.user.accessToken, trend);
+        const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
         const analysis = await openAIService.analyzeTrendAndMedia(trend, searchResults);
         
         // Log successful analysis

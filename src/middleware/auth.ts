@@ -98,25 +98,22 @@ export class AuthMiddleware {
         }
       }
 
-      // Set user in request
       req.user = {
         id: user.userId,
         username: user.username,
         accessToken: user.accessToken,
         refreshToken: user.refreshToken,
-        tokenExpiry: user.tokenExpiry,
-        role: 'user' as const
+        tokenExpiry: user.tokenExpiry
       };
+      
       req.isAuthenticated = function(): this is AuthenticatedRequest {
         return true;
       };
-      next();
+      
+      return next();
     } catch (error) {
       console.error('Authentication error:', error);
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication failed' 
-      });
+      return res.status(401).json({ error: 'Authentication failed' });
     }
   };
 

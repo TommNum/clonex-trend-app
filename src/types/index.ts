@@ -37,12 +37,10 @@ export interface AuthResponse {
 }
 
 export interface PersonalizedTrend {
-  id: string;
-  name: string;
-  query: string;
-  tweet_volume: number;
+  trend_name: string;
   post_count: number;
-  url?: string;
+  category?: string;
+  trending_since: string;
 }
 
 export interface TrendMedia {
@@ -54,11 +52,10 @@ export interface TrendMedia {
 }
 
 export interface ProcessedTrend {
-  trendId: string;
   trendName: string;
+  mediaItems: TrendMedia[];
+  thematicDescription: string;
   processingSuitability: number;
-  suggestedCaption: string;
-  mediaUrl: string;
 }
 
 export interface MediaItem {
@@ -70,13 +67,9 @@ export interface MediaItem {
 }
 
 export interface MediaSwapResult {
-  url: string;
+  originalMediaUrl: string;
+  modifiedMediaUrl: string;
   caption: string;
-  metadata: {
-    originalMediaUrl: string;
-    processingTime: number;
-    aiModel: string;
-  };
 }
 
 export interface XPostResult {

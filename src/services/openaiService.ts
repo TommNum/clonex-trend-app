@@ -98,122 +98,35 @@ export class OpenAIService {
 
     // Select the best media item for swapping
     const selectedMedia = searchResults[0];
-    
+    const originalMediaUrl = selectedMedia.mediaUrl;
+
     try {
-      // Download the media
-      const mediaResponse = await axios.get(selectedMedia.media_url, { responseType: 'arraybuffer' });
-      const mediaBuffer = Buffer.from(mediaResponse.data, 'binary');
-      const mediaPath = path.join(__dirname, '../../public/uploads', `media-${uuidv4()}.jpg`);
-      await writeFileAsync(mediaPath, mediaBuffer);
+      // Download the original media
+      const response = await axios.get(originalMediaUrl, { responseType: 'arraybuffer' });
+      const mediaBuffer = Buffer.from(response.data);
 
-      // Download the user's avatar
-      const avatarResponse = await axios.get(userAvatarUrl, { responseType: 'arraybuffer' });
-      const avatarBuffer = Buffer.from(avatarResponse.data, 'binary');
-      const avatarPath = path.join(__dirname, '../../public/uploads', `avatar-${uuidv4()}.jpg`);
-      await writeFileAsync(avatarPath, avatarBuffer);
-
-      // Analyze the image with GPT-4 Vision
-      const visionPrompt = `
-        Analyze this trending image and provide detailed instructions for replacing the main subject with a user's avatar.
-        Focus on:
-        1. The exact location and size of the face/head area
-        2. The lighting and color characteristics
-        3. The pose and expression
-        4. Any specific details that need to be preserved
-        
-        Format your response as JSON with the following structure:
-        {
-          "faceLocation": { "x": number, "y": number, "width": number, "height": number },
-          "lighting": "description of lighting",
-          "pose": "description of pose",
-          "details": ["list of important details to preserve"]
-        }
-      `;
-
-      const visionResponse = await this.openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert image analyst who provides precise instructions for image editing."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: visionPrompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${mediaBuffer.toString('base64')}`
-                }
-              }
-            ]
-          }
-        ]
-      });
-
-      const analysis = JSON.parse(visionResponse.choices[0].message.content || '{}');
-
-      // Generate a new image with DALL-E
-      const dallePrompt = `
-        Create a new version of this trending image where the main subject's face/head has been replaced with a user's avatar.
-        The avatar should be positioned at coordinates (${analysis.faceLocation.x}, ${analysis.faceLocation.y}) with dimensions ${analysis.faceLocation.width}x${analysis.faceLocation.height}.
-        Maintain the same lighting (${analysis.lighting}), pose (${analysis.pose}), and preserve these details: ${analysis.details.join(', ')}.
-        The result should look natural and seamlessly integrated.
-      `;
-
-      const dalleResponse = await this.openai.images.generate({
-        model: "dall-e-3",
-        prompt: dallePrompt,
+      // Process the media with OpenAI
+      const result = await this.openai.images.edit({
+        image: mediaBuffer,
+        mask: await this.generateMask(mediaBuffer),
+        prompt: `Replace the main subject with a user's avatar image. The avatar should be seamlessly integrated into the scene.`,
         n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        style: "natural"
+        size: "1024x1024"
       });
 
-      // Download the generated image
-      const generatedImageUrl = dalleResponse.data[0].url;
-      const generatedImageResponse = await axios.get(generatedImageUrl!, { responseType: 'arraybuffer' });
-      const generatedImageBuffer = Buffer.from(generatedImageResponse.data, 'binary');
-      
-      // Save the generated image
-      const outputFileName = `swapped-${uuidv4()}.jpg`;
-      const outputPath = path.join(__dirname, '../../public/uploads', outputFileName);
-      
-      // Process the image with Sharp to ensure consistent format and quality
-      await sharp(generatedImageBuffer)
-        .jpeg({ quality: 90 })
-        .toFile(outputPath);
+      const modifiedMediaUrl = result.data[0].url;
 
-      // Generate a caption for the modified image
-      const captionPrompt = `
-        Create a witty, engaging caption for a post where a user's avatar has been inserted into a trending image related to "${processedTrend.trendName}".
-        
-        Trend information:
-        ${processedTrend.thematicDescription}
-        
-        Make the caption relatable, funny, and appropriate for social media. Keep it under 180 characters.
-      `;
-
-      const captionResponse = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{
-          role: "system",
-          content: "You are a social media expert who creates engaging captions."
-        }, {
-          role: "user",
-          content: captionPrompt
-        }]
-      });
+      // Generate a caption for the post
+      const caption = await this.generateCaption(processedTrend);
 
       return {
-        originalMediaUrl: selectedMedia.mediaUrl,
-        modifiedMediaUrl: `/uploads/${outputFileName}`,
-        caption: captionResponse.choices[0].message.content || `Check out me in the ${processedTrend.trendName} trend!`
+        originalMediaUrl,
+        modifiedMediaUrl,
+        caption
       };
     } catch (error) {
       console.error('Error swapping media with avatar:', error);
-      throw new Error('Failed to process image swap');
+      throw new Error('Failed to swap media with avatar');
     }
   }
 
