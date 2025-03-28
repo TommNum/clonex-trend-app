@@ -3,29 +3,32 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies first
-COPY package*.json ./
-
-# Install dependencies with a more stable approach
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@10.8.2 \
-    && npm cache clean --force \
-    && npm install --no-audit --no-fund --legacy-peer-deps
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy source code and other necessary files
-COPY . .
+# Install npm dependencies
+COPY package*.json ./
+RUN npm install -g npm@10.8.2 && \
+    npm cache clean --force && \
+    npm install --no-audit --no-fund --legacy-peer-deps
 
-# Create necessary directories and ensure they exist
+# Create necessary directories
 RUN mkdir -p public/css dist
 
+# Copy source code
+COPY . .
+
+# Create base CSS file if it doesn't exist
+RUN touch public/css/style.css
+
 # Build TypeScript and CSS
-RUN npm run build:css
-RUN npm run build
+RUN npm run build:css && \
+    npm run build
 
 # Production stage
 FROM caddy:2-alpine

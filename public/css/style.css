@@ -1,7 +1,8 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Custom styles */
 :root {
   --primary-color: #1DA1F2;
   --primary-hover: #0d95e8;

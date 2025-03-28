@@ -122,4 +122,13 @@ export interface XSearchResult {
       }[];
     }[];
   };
+}
+
+export interface Post {
+  id: string;
+  userId: string;
+  content: string;
+  mediaUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
 } 
