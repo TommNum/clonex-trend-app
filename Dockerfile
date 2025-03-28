@@ -26,7 +26,8 @@ COPY . .
 
 # Build TypeScript and CSS
 RUN npm run build:css && \
-    npm run build
+    npm run build && \
+    rm -rf node_modules
 
 # Production stage
 FROM caddy:2-alpine
