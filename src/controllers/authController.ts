@@ -25,10 +25,10 @@ export const login = (req: Request, res: Response) => {
     req.session.codeVerifier = codeVerifier;
     console.log('Session after setting code verifier:', req.session);
 
-    res.json({ url });
+    return res.json({ url });
   } catch (error) {
     console.error('Error in login:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Failed to start login process',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
