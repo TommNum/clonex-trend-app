@@ -14,6 +14,7 @@ export default defineConfig({
   },
   preview: {
     port: process.env.PORT || 5173,
-    host: true
+    host: true,
+    allowedHosts: ['clonex-trend-app.railway.internal, healthcheck.railway.app']
   }
 })
