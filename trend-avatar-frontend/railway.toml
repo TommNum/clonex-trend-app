@@ -3,9 +3,12 @@ builder = "nixpacks"
 buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "npm run preview"
+healthcheckPath = "/"
+healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
 
 [deploy.env]
-NODE_ENV = "production" 
+NODE_ENV = "production"
+API_URL="clonex-trend-app.railway.internal"
