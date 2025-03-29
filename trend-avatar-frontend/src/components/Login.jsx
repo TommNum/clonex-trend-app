@@ -1,86 +1,39 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import './Login.css';
 
 export default function Login() {
-  const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = () => {
     setLoading(true);
     setError(null);
-    
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          username: 'demo', // This matches the backend's demo user
-          password: 'password' 
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        window.location.href = '/dashboard';
-      } else {
-        setError(data.message);
-      }
-    } catch (error) {
-      console.error('Error during login:', error);
-      setError('An error occurred during login');
-    } finally {
-      setLoading(false);
-    }
+    // Directly redirect to X OAuth
+    window.location.href = '/api/auth/login';
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
         <div className="logo">
-          <img src="/logo.png" alt="Trend Avatar Logo" />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-twitter-blue" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+          </svg>
         </div>
         <h1>Welcome to Trend Avatar</h1>
         <p>Connect your X account to get started</p>
         {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input 
-              type="text" 
-              id="username" 
-              name="username" 
-              defaultValue="demo"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              defaultValue="password"
-              required
-            />
-          </div>
-          <button 
-            type="submit"
-            className="login-button"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="loader"></span>
-            ) : (
-              'Sign in'
-            )}
-          </button>
-        </form>
+        <button 
+          onClick={handleLogin} 
+          className="login-button"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="loader"></span>
+          ) : (
+            'Connect with X'
+          )}
+        </button>
       </div>
     </div>
   );
