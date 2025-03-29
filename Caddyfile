@@ -18,9 +18,6 @@
     format json
   }
 
-  # Health check for Railway
-  rewrite /health /*
-
   # Handle static files first
   handle /public/* {
     root * /usr/share/caddy
