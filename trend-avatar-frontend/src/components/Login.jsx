@@ -8,8 +8,7 @@ export default function Login() {
   const handleLogin = () => {
     setLoading(true);
     setError(null);
-    // Hit the backend's auth endpoint directly
-    window.location.href = 'http://localhost:3000/api/auth/login';
+    window.location.href = `${process.env.API_URL}/api/auth/login`;
   };
 
   return (

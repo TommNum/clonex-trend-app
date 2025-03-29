@@ -32,12 +32,13 @@
 }
 
 .logo {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-.logo img {
-  width: 120px;
-  height: auto;
+.logo svg {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
 }
 
 .login-box h1 {
