@@ -97,13 +97,31 @@ app.get('/', (req, res) => {
 });
 
 // Dashboard route
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
     return res.redirect('/auth/login');
   }
-  res.render('dashboard', { 
-    user: req.session.user 
-  });
+
+  try {
+    // Get active trends count
+    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
+    const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
+    
+    res.render('dashboard', { 
+      user: req.session.user,
+      stats: {
+        activeTrends: trends.length || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.render('dashboard', { 
+      user: req.session.user,
+      stats: {
+        activeTrends: 0
+      }
+    });
+  }
 });
 
 // Function to store processed trends
