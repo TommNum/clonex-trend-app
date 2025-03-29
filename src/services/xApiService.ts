@@ -13,7 +13,15 @@ export class XApiService {
     this.baseUrl = 'https://api.twitter.com/2';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
-    this.callbackUrl = process.env.X_CALLBACK_URL || '';
+    // Use the current host for the callback URL if not set
+    this.callbackUrl = process.env.X_CALLBACK_URL || `${process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3000'}/auth/callback`;
+    
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('X API credentials not configured');
+    }
+
+    console.log('XApiService initialized with callback URL:', this.callbackUrl);
+    
     this.client = axios.create({
       baseURL: this.baseUrl,
     });
@@ -21,6 +29,10 @@ export class XApiService {
 
   // Generate OAuth 2.0 authorization URL with PKCE
   generateAuthUrl(): { url: string, codeVerifier: string } {
+    if (!this.callbackUrl) {
+      throw new Error('Callback URL not configured');
+    }
+
     console.log('Generating auth URL with callback:', this.callbackUrl);
     const codeVerifier = crypto.randomBytes(32).toString('hex');
     const codeChallenge = crypto.createHash('sha256')
@@ -51,11 +63,16 @@ export class XApiService {
     refreshToken: string;
     expiresIn: number;
   }> {
+    if (!this.callbackUrl) {
+      throw new Error('Callback URL not configured');
+    }
+
     console.log('Exchanging code for tokens with callback:', this.callbackUrl);
     const params = new URLSearchParams();
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
     params.append('client_id', this.clientId);
+    params.append('client_secret', this.clientSecret);
     params.append('redirect_uri', this.callbackUrl);
     params.append('code_verifier', codeVerifier);
 
@@ -77,8 +94,9 @@ export class XApiService {
       if (axios.isAxiosError(error)) {
         console.error('Response data:', error.response?.data);
         console.error('Response status:', error.response?.status);
+        throw new Error(`Failed to exchange code for tokens: ${error.response?.data?.error || 'Unknown error'}`);
       }
-      throw new Error('Failed to exchange code for tokens');
+      throw error;
     }
   }
 
