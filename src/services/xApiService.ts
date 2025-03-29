@@ -13,14 +13,25 @@ export class XApiService {
     this.baseUrl = 'https://api.twitter.com/2';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
-    // Use the current host for the callback URL if not set
-    this.callbackUrl = process.env.X_CALLBACK_URL || `${process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3000'}/auth/callback`;
+    
+    // Format callback URL properly
+    let callbackUrl = process.env.X_CALLBACK_URL || '';
+    if (!callbackUrl) {
+      callbackUrl = `${process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3000'}/auth/callback`;
+    }
+    
+    // Remove any @ symbol if present
+    this.callbackUrl = callbackUrl.replace(/^@/, '');
     
     if (!this.clientId || !this.clientSecret) {
       throw new Error('X API credentials not configured');
     }
 
-    console.log('XApiService initialized with callback URL:', this.callbackUrl);
+    console.log('XApiService initialized with:', {
+      baseUrl: this.baseUrl,
+      clientId: this.clientId ? '***' + this.clientId.slice(-4) : 'not set',
+      callbackUrl: this.callbackUrl
+    });
     
     this.client = axios.create({
       baseURL: this.baseUrl,

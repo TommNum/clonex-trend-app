@@ -14,10 +14,13 @@ export const login = (req: Request, res: Response) => {
     }
 
     console.log('Starting login process');
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Callback URL:', process.env.X_CALLBACK_URL);
     console.log('Session before auth URL generation:', req.session);
     
     const { url, codeVerifier } = xApiService.generateAuthUrl();
     console.log('Generated code verifier:', codeVerifier);
+    console.log('Generated auth URL:', url);
     
     req.session.codeVerifier = codeVerifier;
     console.log('Session after setting code verifier:', req.session);
@@ -34,8 +37,17 @@ export const login = (req: Request, res: Response) => {
 
 export const callback = async (req: Request, res: Response) => {
   try {
-    console.log('Received callback with query params:', req.query);
-    console.log('Current session state:', req.session);
+    console.log('=== Callback Debug Info ===');
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Callback URL:', process.env.X_CALLBACK_URL);
+    console.log('Request URL:', req.protocol + '://' + req.get('host') + req.originalUrl);
+    console.log('Query parameters:', req.query);
+    console.log('Session state:', {
+      id: req.session.id,
+      hasCodeVerifier: !!req.session.codeVerifier,
+      codeVerifier: req.session.codeVerifier,
+      user: req.session.user
+    });
     
     const { code, state, error } = req.query;
     const { codeVerifier } = req.session;
@@ -63,8 +75,17 @@ export const callback = async (req: Request, res: Response) => {
     }
 
     console.log('Attempting to exchange code for token');
+    console.log('Code:', code);
+    console.log('Code verifier length:', codeVerifier.length);
+    
     const userInfo = await xApiService.exchangeCodeForToken(code.toString(), codeVerifier);
     console.log('Successfully exchanged code for token');
+    console.log('User info:', {
+      id: userInfo.id,
+      username: userInfo.username,
+      hasAccessToken: !!userInfo.accessToken,
+      hasRefreshToken: !!userInfo.refreshToken
+    });
 
     const user: User = {
       id: userInfo.id,
@@ -81,10 +102,17 @@ export const callback = async (req: Request, res: Response) => {
     console.log('Successfully authenticated user:', userInfo.username);
     return res.redirect('/dashboard');
   } catch (error) {
-    console.error('Error in callback:', error);
+    console.error('=== Callback Error ===');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    
     if (axios.isAxiosError(error)) {
-      console.error('Response data:', error.response?.data);
-      console.error('Response status:', error.response?.status);
+      console.error('Axios error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
       return res.status(error.response?.status || 500).json({ 
         error: 'Authentication failed',
         details: error.response?.data || 'Unknown error'
