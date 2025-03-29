@@ -49,129 +49,33 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Always use secure cookies in production
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: 'lax',
-    httpOnly: true,
-    domain: process.env.NODE_ENV === 'production' ? '.railway.app' : undefined
-  },
-  proxy: true, // Trust the proxy
-  name: 'sessionId', // Explicitly set session name
-  rolling: true // Update session on every request
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
-// Trust proxy for secure cookies
-app.set('trust proxy', 1);
-
-// Add security headers
-app.use((req, res, next) => {
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
-
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/css', express.static(path.join(__dirname, '../public/css')));
-
-// View engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, '../views'));
-
-// Routes
+// API Routes
 app.use('/auth', authRoutes);
 app.use('/api/trends', trendRoutes);
 
-// Home route
-app.get('/', (req, res) => {
-  res.render('index', { 
-    user: req.session.user || null 
-  });
-});
+// Serve frontend application
+app.use(express.static(path.join(__dirname, '../../trend-avatar-frontend/dist')));
 
-// Dashboard route
-app.get('/dashboard', async (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/auth/login');
-  }
-
-  try {
-    // Get active trends count
-    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-    
-    res.render('dashboard', { 
-      user: req.session.user,
-      stats: {
-        activeTrends: trends.length || 0
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', { 
-      user: req.session.user,
-      stats: {
-        activeTrends: 0
-      }
-    });
-  }
-});
-
-// Function to store processed trends
-async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
-  try {
-    // Here you would implement your storage logic
-    // For example, saving to a database or file
-    console.log(`Storing processed trend: ${processedTrend.trendName}`);
-  } catch (error) {
-    console.error('Error storing trend:', error);
-  }
-}
-
-// Schedule trend analysis
-cron.schedule('0 */4 * * *', async () => {
-  try {
-    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    if (!systemAccessToken) {
-      console.error('System access token not configured');
-      return;
-    }
-
-    const trends = await xApiService.getTrendingTopics(systemAccessToken);
-    for (const trend of trends) {
-      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
-      const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
-      processedTrend.mediaItems = searchResults;
-
-      if (processedTrend.processingSuitability >= 75) {
-        // Store high-suitability trends for later processing
-        await storeTrend(processedTrend);
-      }
-    }
-  } catch (error) {
-    console.error('Error in scheduled trend analysis:', error);
-  }
+// Handle all other routes by serving the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../trend-avatar-frontend/dist/index.html'));
 });
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
   return res.status(500).json({ error: err.message });
-});
-
-// 404 handler
-app.use((req: express.Request, res: express.Response) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
 });
 
 // Start the server

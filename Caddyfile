@@ -18,8 +18,10 @@
     format json
   }
 
-  # Health check for Railway
-  rewrite /health /*
+  # Health check endpoint for Railway
+  handle /health {
+    respond 200
+  }
 
   # Handle static files first
   handle /public/* {
