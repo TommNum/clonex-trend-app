@@ -21,15 +21,14 @@
   # Health check for Railway
   rewrite /health /*
 
-  # Serve static files from public directory
-  root * /usr/share/caddy/public
-
-  # Enable gzipping responses
-  encode gzip
-
-  # Serve static files
-  file_server
+  # Handle static files first
+  handle /public/* {
+    root * /usr/share/caddy
+    file_server
+  }
 
   # Handle all other requests through our Node.js application
-  reverse_proxy localhost:3000
+  handle {
+    reverse_proxy localhost:3000
+  }
 } 
