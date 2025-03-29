@@ -16,10 +16,5 @@ export default defineConfig({
     port: process.env.PORT || 5173,
     host: true,
     allowedHosts: ['clonex-trend-app.railway.internal', 'healthcheck.railway.app', 'talented-miracle-production.up.railway.app']
-  },
-  build: {
-    rollupOptions: {
-      external: ['react-router-dom']
-    }
   }
 })

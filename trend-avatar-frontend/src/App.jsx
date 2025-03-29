@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import * as ReactRouter from 'react-router-dom'
 import Home from './components/Home'
 import './App.css'
 
@@ -11,13 +11,13 @@ function App() {
   }
 
   return (
-    <Router>
+    <ReactRouter.BrowserRouter>
       <div className="app">
-        <Routes>
-          <Route path="/" element={<Home user={user} onLogout={handleLogout} />} />
-        </Routes>
+        <ReactRouter.Routes>
+          <ReactRouter.Route path="/" element={<Home user={user} onLogout={handleLogout} />} />
+        </ReactRouter.Routes>
       </div>
-    </Router>
+    </ReactRouter.BrowserRouter>
   )
 }
 
