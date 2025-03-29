@@ -8,8 +8,8 @@ export default function Login() {
   const handleLogin = () => {
     setLoading(true);
     setError(null);
-    // Directly redirect to X OAuth
-    window.location.href = '/api/auth/login';
+    // Hit the backend's auth endpoint directly
+    window.location.href = 'http://localhost:3000/api/auth/login';
   };
 
   return (

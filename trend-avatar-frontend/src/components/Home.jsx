@@ -16,7 +16,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/trends');
+      const response = await fetch(`${process.env.API_URL}/api/trends`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -40,7 +40,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/trends/analyze/${encodeURIComponent(trendName)}`);
+      const response = await fetch(`${process.env.API_URL}/api/trends/analyze/${encodeURIComponent(trendName)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -88,7 +88,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/trends/process/${encodeURIComponent(trendName)}`, {
+      const response = await fetch(`${process.env.API_URL}/api/trends/process/${encodeURIComponent(trendName)}`, {
         method: 'POST',
       });
       
@@ -120,7 +120,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/trends/auto-process', {
+      const response = await fetch(`${process.env.API_URL}/api/trends/auto-process`, {
         method: 'POST',
       });
       
@@ -171,7 +171,7 @@ export default function Home({ user, onLogout }) {
     
     setLoading(true);
     try {
-      const response = await fetch('/api/trends/post', {
+      const response = await fetch(`${process.env.API_URL}/api/trends/post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

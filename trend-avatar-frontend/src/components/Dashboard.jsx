@@ -14,7 +14,7 @@ export default function Dashboard() {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch('/api/trends');
+            const response = await fetch(`${process.env.API_URL}/api/trends`);
             const data = await response.json();
             setTrends(data);
         } catch (error) {
@@ -28,7 +28,7 @@ export default function Dashboard() {
     const selectTrend = async (trendId) => {
         try {
             setError(null);
-            const response = await fetch(`/api/trends/${trendId}/media`);
+            const response = await fetch(`${process.env.API_URL}/api/trends/${trendId}/media`);
             const data = await response.json();
             
             if (data.length === 0) {
@@ -46,7 +46,7 @@ export default function Dashboard() {
 
     const processMedia = async (mediaId) => {
         try {
-            const response = await fetch(`/api/trends/${selectedTrend}/process`, {
+            const response = await fetch(`${process.env.API_URL}/api/trends/${selectedTrend}/process`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -65,7 +65,7 @@ export default function Dashboard() {
 
     const postToX = async () => {
         try {
-            const response = await fetch('/api/trends/post', {
+            const response = await fetch(`${process.env.API_URL}/api/trends/post`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -90,7 +90,7 @@ export default function Dashboard() {
 
     const autoProcessTrend = async () => {
         try {
-            const response = await fetch('/api/trends/auto-process', {
+            const response = await fetch(`${process.env.API_URL}/api/trends/auto-process`, {
                 method: 'POST'
             });
 

@@ -8,8 +8,7 @@ function App() {
   const [user, setUser] = useState(null)
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    setUser(null)
+    window.location.href = `${process.env.API_URL}/api/auth/logout`;
   }
 
   return (
