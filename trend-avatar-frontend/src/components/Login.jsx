@@ -10,7 +10,7 @@ export default function Login() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://talented-miracle-production.up.railway.app/api/auth/login', {
+      const response = await fetch('https://talented-miracle-production.up.railway.app/auth/login', {
         method: 'GET',
         credentials: 'include'
       });
