@@ -279,9 +279,10 @@ export const {
   validateRequest
 } = authMiddleware;
 
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.session?.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
   }
 
   // Set up isAuthenticated function

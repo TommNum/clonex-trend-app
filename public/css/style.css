@@ -4,140 +4,113 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 199 100% 42%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 162 100% 43%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 330 100% 87%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 199 100% 42%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 100% 42%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 162 100% 43%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 330 100% 87%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 199 100% 42%;
-  }
+/* Custom styles */
+:root {
+  --primary-color: #00B4D8;
+  --primary-hover: #0096C7;
+  --secondary-color: #0F172A;
+  --text-color: #64748B;
+  --light-text: #94A3B8;
+  --border-color: #E2E8F0;
+  --bg-color: #F8FAFC;
+  --success-color: #06D6A0;
+  --error-color: #FF6B6B;
 }
 
-@layer components {
-  /* Button Styles */
-  .btn-primary {
-    @apply bg-cerulean hover:bg-cerulean/90 text-white font-medium py-2 px-4 rounded-full transition duration-200;
-  }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--secondary-color);
+  line-height: 1.5;
+}
 
-  .btn-outline {
-    @apply bg-white text-cerulean border border-cerulean font-medium py-2 px-4 rounded-full hover:bg-cerulean/10 transition duration-200;
-  }
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
 
-  .btn-secondary {
-    @apply bg-transparent hover:bg-muted text-foreground font-medium py-2 px-4 rounded-full transition duration-200;
-  }
+a:hover {
+  text-decoration: underline;
+}
 
-  /* Card Styles */
-  .card {
-    @apply bg-white dark:bg-dark-navy rounded-xl shadow-md border border-border overflow-hidden;
-  }
+.btn-primary {
+  @apply bg-cerulean hover:bg-cerulean/90 text-white font-medium py-2 px-4 rounded-full transition duration-200;
+}
 
-  .content-card {
-    @apply bg-white dark:bg-dark-navy p-4 rounded-xl shadow-sm border border-border hover:border-accent transition-all duration-200;
-  }
+.btn-outline {
+  @apply bg-white text-cerulean border border-cerulean font-medium py-2 px-4 rounded-full hover:bg-cerulean/10 transition duration-200;
+}
 
-  .trend-card {
-    @apply bg-white dark:bg-dark-navy p-4 rounded-xl border border-border hover:bg-muted transition-all duration-200 cursor-pointer;
-  }
+.btn-secondary {
+  @apply bg-transparent hover:bg-gray-100 text-dark-navy font-medium py-2 px-4 rounded-full transition duration-200;
+}
 
-  .trend-card.active {
-    @apply border-cerulean bg-cerulean/10;
-  }
+.card {
+  @apply bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden;
+}
 
-  /* Avatar Styles */
-  .avatar-wrapper {
-    @apply relative inline-block;
-  }
+.avatar-wrapper {
+  @apply relative inline-block;
+}
 
-  .avatar {
-    @apply rounded-full object-cover;
-  }
+.avatar {
+  @apply rounded-full object-cover;
+}
 
-  .avatar.border {
-    @apply border-2 border-white;
-  }
+.avatar.border {
+  @apply border-2 border-white;
+}
 
-  /* Form Styles */
-  .input-field {
-    @apply w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-cerulean focus:border-transparent bg-background text-foreground;
-  }
+.content-card {
+  @apply bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-gray-200 transition-all duration-200;
+}
 
-  /* Layout Styles */
-  .navbar {
-    @apply sticky top-0 z-50 bg-background border-b border-border px-4 py-3 flex items-center justify-between;
-  }
+.trend-card {
+  @apply bg-white p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-all duration-200 cursor-pointer;
+}
 
-  .sidebar {
-    @apply fixed h-full w-64 px-4 py-6 overflow-y-auto bg-background border-r border-border;
-  }
+.trend-card.active {
+  @apply border-cerulean bg-cerulean/5;
+}
 
-  .main-content {
-    @apply ml-64 p-6;
-  }
+.input-field {
+  @apply w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cerulean focus:border-transparent;
+}
 
-  /* Utility Styles */
-  .loader {
-    @apply animate-spin rounded-full h-5 w-5 border-b-2 border-cerulean;
-  }
+.navbar {
+  @apply sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between;
+}
 
-  .tooltip {
-    @apply invisible absolute;
-  }
+.sidebar {
+  @apply fixed h-full w-64 px-4 py-6 overflow-y-auto bg-white border-r border-gray-100;
+}
 
-  .has-tooltip:hover .tooltip {
-    @apply visible z-50;
-  }
+.main-content {
+  @apply ml-64 p-6;
+}
 
-  /* Status Styles */
-  .status-pending {
-    @apply bg-yellow-100 text-yellow-800 rounded-full px-3 py-1 text-xs font-medium;
-  }
+.loader {
+  @apply animate-spin rounded-full h-5 w-5 border-b-2 border-cerulean;
+}
 
-  .status-completed {
-    @apply bg-green-100 text-green-800 rounded-full px-3 py-1 text-xs font-medium;
-  }
+.tooltip {
+  @apply invisible absolute;
+}
 
-  .status-failed {
-    @apply bg-red-100 text-red-800 rounded-full px-3 py-1 text-xs font-medium;
-  }
+.has-tooltip:hover .tooltip {
+  @apply visible z-50;
+}
+
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 rounded-full px-3 py-1 text-xs font-medium;
+}
+
+.status-completed {
+  @apply bg-green-100 text-green-800 rounded-full px-3 py-1 text-xs font-medium;
+}
+
+.status-failed {
+  @apply bg-red-100 text-red-800 rounded-full px-3 py-1 text-xs font-medium;
 }
 
 /* Media Queries */
