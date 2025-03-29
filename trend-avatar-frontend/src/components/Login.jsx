@@ -8,7 +8,7 @@ export default function Login() {
   const handleLogin = () => {
     setLoading(true);
     setError(null);
-    window.location.href = 'https://clonex-trend-app-production.up.railway.app/api/auth/login';
+    window.location.href = '/api/auth/login';
   };
 
   return (

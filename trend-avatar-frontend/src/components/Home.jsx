@@ -328,7 +328,7 @@ export default function Home({ user, onLogout }) {
         <div className="auth-prompt">
           <button 
             onClick={() => {
-              window.location.href = 'https://clonex-trend-app-production.up.railway.app/api/auth/login';
+              window.location.href = '/api/auth/login';
             }}
             className="btn primary"
           >
