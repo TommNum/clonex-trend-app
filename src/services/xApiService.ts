@@ -287,14 +287,41 @@ export class XApiService {
     };
   }
 
-  async getTrendingTopics(accessToken: string): Promise<any[]> {
+  async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/trends/place.json?id=1`, {
-        headers: this.getHeaders(accessToken)
+      console.log('Fetching trending topics with token:', accessToken ? '***' + accessToken.slice(-4) : 'not set');
+      
+      const response = await this.client.get('/trends/place.json?id=1', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
       });
-      return response.data[0].trends;
+
+      console.log('Trends API response:', response.data);
+      
+      if (!response.data || !Array.isArray(response.data[0]?.trends)) {
+        console.error('Invalid trends response format:', response.data);
+        return [];
+      }
+
+      return response.data[0].trends.map((trend: any) => ({
+        id: trend.name,
+        name: trend.name,
+        query: trend.query,
+        tweetVolume: trend.tweet_volume,
+        url: trend.url,
+        timestamp: new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error fetching trending topics:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers
+        });
+      }
       throw error;
     }
   }

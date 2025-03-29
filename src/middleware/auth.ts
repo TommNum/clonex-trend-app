@@ -280,10 +280,16 @@ export const {
 } = authMiddleware;
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
-    return res.redirect('/auth/login');
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  return next();
+
+  // Set up isAuthenticated function
+  req.isAuthenticated = function(): this is AuthenticatedRequest {
+    return true;
+  };
+
+  next();
 };
 
 export const requireGuest = (req: Request, res: Response, next: NextFunction) => {
