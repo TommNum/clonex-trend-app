@@ -67,6 +67,11 @@ app.use('/api/trends', trendRoutes);
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Home route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
