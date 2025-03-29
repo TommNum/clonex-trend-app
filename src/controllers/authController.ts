@@ -8,27 +8,27 @@ const xApiService = new XApiService();
 
 export const login = (req: Request, res: Response) => {
   try {
-    // Check if user is already authenticated
-    if (req.isAuthenticated) {
-      return res.redirect('/dashboard');
+    // Check if user is already authenticated by checking session
+    if (req.session.user) {
+      return res.json({ url: '/dashboard' });
     }
 
     console.log('Starting login process');
     console.log('Environment:', process.env.NODE_ENV);
     console.log('Callback URL:', process.env.X_CALLBACK_URL);
     console.log('Session before auth URL generation:', req.session);
-    
+
     const { url, codeVerifier } = xApiService.generateAuthUrl();
     console.log('Generated code verifier:', codeVerifier);
     console.log('Generated auth URL:', url);
-    
+
     req.session.codeVerifier = codeVerifier;
     console.log('Session after setting code verifier:', req.session);
-    
-    res.redirect(url);
+
+    res.json({ url });
   } catch (error) {
     console.error('Error in login:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to start login process',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -48,7 +48,7 @@ export const callback = async (req: Request, res: Response) => {
       codeVerifier: req.session.codeVerifier,
       user: req.session.user
     });
-    
+
     const { code, state, error } = req.query;
     const { codeVerifier } = req.session;
 
@@ -58,13 +58,13 @@ export const callback = async (req: Request, res: Response) => {
     }
 
     if (!code || !codeVerifier) {
-      console.error('Missing required parameters:', { 
-        code: !!code, 
+      console.error('Missing required parameters:', {
+        code: !!code,
         codeVerifier: !!codeVerifier,
         sessionId: req.session.id,
         sessionExists: !!req.session
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing code or code verifier',
         details: {
           hasCode: !!code,
@@ -77,7 +77,7 @@ export const callback = async (req: Request, res: Response) => {
     console.log('Attempting to exchange code for token');
     console.log('Code:', code);
     console.log('Code verifier length:', codeVerifier.length);
-    
+
     const userInfo = await xApiService.exchangeCodeForToken(code.toString(), codeVerifier);
     console.log('Successfully exchanged code for token');
     console.log('User info:', {
@@ -105,7 +105,7 @@ export const callback = async (req: Request, res: Response) => {
     console.error('=== Callback Error ===');
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    
+
     if (axios.isAxiosError(error)) {
       console.error('Axios error details:', {
         status: error.response?.status,
@@ -113,12 +113,12 @@ export const callback = async (req: Request, res: Response) => {
         data: error.response?.data,
         headers: error.response?.headers
       });
-      return res.status(error.response?.status || 500).json({ 
+      return res.status(error.response?.status || 500).json({
         error: 'Authentication failed',
         details: error.response?.data || 'Unknown error'
       });
     }
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Authentication failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     });

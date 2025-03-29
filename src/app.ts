@@ -45,24 +45,27 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? 'https://talented-miracle-production.up.railway.app'
+    : 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Always use secure cookies in production
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: 'lax',
-    httpOnly: true,
-    domain: process.env.NODE_ENV === 'production' ? '.railway.app' : undefined
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  proxy: true, // Trust the proxy
-  name: 'sessionId', // Explicitly set session name
-  rolling: true // Update session on every request
+  name: 'sessionId'
 }));
 
 // Trust proxy for secure cookies
@@ -91,8 +94,8 @@ app.use('/api/trends', trendRoutes);
 
 // Home route
 app.get('/', (req, res) => {
-  res.render('index', { 
-    user: req.session.user || null 
+  res.render('index', {
+    user: req.session.user || null
   });
 });
 
@@ -106,8 +109,8 @@ app.get('/dashboard', async (req, res) => {
     // Get active trends count
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
     const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-    
-    res.render('dashboard', { 
+
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: trends.length || 0
@@ -115,7 +118,7 @@ app.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', { 
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: 0

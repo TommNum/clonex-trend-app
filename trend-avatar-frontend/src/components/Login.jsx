@@ -5,10 +5,28 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    setLoading(true);
-    setError(null);
-    window.location.href = 'https://talented-miracle-production.up.railway.app/api/auth/login';
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('https://talented-miracle-production.up.railway.app/api/auth/login', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get auth URL');
+      }
+      
+      const data = await response.json();
+      window.location.href = data.url;
+    } catch (err) {
+      setError('Failed to start login process. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
