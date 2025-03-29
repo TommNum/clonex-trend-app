@@ -16,6 +16,8 @@ export const login = (req: Request, res: Response) => {
     console.log('Starting login process');
     console.log('Environment:', process.env.NODE_ENV);
     console.log('Callback URL:', process.env.X_CALLBACK_URL);
+    console.log('X Client ID:', process.env.X_CLIENT_ID ? '***' + process.env.X_CLIENT_ID.slice(-4) : 'not set');
+    console.log('X Client Secret:', process.env.X_CLIENT_SECRET ? '***' + process.env.X_CLIENT_SECRET.slice(-4) : 'not set');
     console.log('Session before auth URL generation:', req.session);
 
     const { url, codeVerifier } = xApiService.generateAuthUrl();
@@ -28,9 +30,21 @@ export const login = (req: Request, res: Response) => {
     return res.json({ url });
   } catch (error) {
     console.error('Error in login:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', {
+      message: errorMessage,
+      hasClientId: !!process.env.X_CLIENT_ID,
+      hasClientSecret: !!process.env.X_CLIENT_SECRET,
+      hasCallbackUrl: !!process.env.X_CALLBACK_URL
+    });
     return res.status(500).json({
       error: 'Failed to start login process',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage,
+      config: {
+        hasClientId: !!process.env.X_CLIENT_ID,
+        hasClientSecret: !!process.env.X_CLIENT_SECRET,
+        hasCallbackUrl: !!process.env.X_CALLBACK_URL
+      }
     });
   }
 };
