@@ -21,28 +21,17 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/auth/callback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
+      const response = await fetch(`/api/auth/callback?code=${code}`, {
+        method: 'GET',
+        credentials: 'include', // Important for cookies
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'Authentication failed');
-      }
-
-      // Store the token
-      localStorage.setItem('token', data.token);
-      // Redirect to home
-      navigate('/');
+      // After successful callback, redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (error) {
       console.error('Error during authentication:', error);
       setError(error.message || 'Failed to authenticate with X');
