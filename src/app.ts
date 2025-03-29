@@ -92,6 +92,14 @@ app.set('views', path.join(__dirname, '../views'));
 app.use('/auth', authRoutes);
 app.use('/api/trends', trendRoutes);
 
+// Serve frontend application
+app.use(express.static(path.join(__dirname, '../../trend-avatar-frontend/dist')));
+
+// Handle all other routes by serving the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../trend-avatar-frontend/dist/index.html'));
+});
+
 // Home route
 app.get('/', (req, res) => {
   res.render('index', {

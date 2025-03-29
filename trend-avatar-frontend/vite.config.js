@@ -16,5 +16,15 @@ export default defineConfig({
     port: process.env.PORT || 5173,
     host: true,
     allowedHosts: ['clonex-trend-app.railway.internal', 'healthcheck.railway.app', 'talented-miracle-production.up.railway.app', 'clonex-trend-app-production.up.railway.app']
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
