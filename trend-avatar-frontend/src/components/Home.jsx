@@ -17,14 +17,16 @@ export default function Home({ user, onLogout }) {
     setError(null);
     try {
       const response = await fetch('/api/trends');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       
-      if (!data.trends || data.trends.length === 0) {
-        setError('No trends found. Try refreshing later.');
-        return;
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid response format');
       }
       
-      setTrends(data.trends);
+      setTrends(data);
     } catch (error) {
       console.error('Error fetching trends:', error);
       setError('Failed to load trends. Please try again.');
@@ -39,16 +41,18 @@ export default function Home({ user, onLogout }) {
     setError(null);
     try {
       const response = await fetch(`/api/trends/analyze/${encodeURIComponent(trendName)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       
-      if (!data.analysis) {
-        setError('No analysis available for this trend.');
-        return;
+      if (!data || !data.analysis) {
+        throw new Error('Invalid response format');
       }
       
       const analysis = data.analysis;
       
-      if (analysis.processingSuitability >= 50 && analysis.mediaItems.length > 0) {
+      if (analysis.processingSuitability >= 50 && analysis.mediaItems?.length > 0) {
         const firstMedia = analysis.mediaItems[0];
         setMediaPreview({
           imageUrl: firstMedia.mediaUrl,
@@ -56,7 +60,7 @@ export default function Home({ user, onLogout }) {
           suitability: analysis.processingSuitability,
           trendName: trendName
         });
-      } else if (analysis.mediaItems.length > 0) {
+      } else if (analysis.mediaItems?.length > 0) {
         const firstMedia = analysis.mediaItems[0];
         setMediaPreview({
           imageUrl: firstMedia.mediaUrl,
@@ -88,16 +92,14 @@ export default function Home({ user, onLogout }) {
         method: 'POST',
       });
       
-      const data = await response.json();
-      
-      if (data.error) {
-        setError(data.error);
-        return;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      if (!data.result) {
-        setError('Failed to process media.');
-        return;
+      const data = await response.json();
+      
+      if (!data || !data.result) {
+        throw new Error('Invalid response format');
       }
       
       setProcessedResult({
@@ -122,7 +124,15 @@ export default function Home({ user, onLogout }) {
         method: 'POST',
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      
+      if (!data) {
+        throw new Error('Invalid response format');
+      }
       
       if (data.error) {
         setError(data.error);
@@ -172,7 +182,15 @@ export default function Home({ user, onLogout }) {
         }),
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      
+      if (!data) {
+        throw new Error('Invalid response format');
+      }
       
       if (data.error) {
         setError(data.error);
@@ -197,8 +215,10 @@ export default function Home({ user, onLogout }) {
   };
 
   useEffect(() => {
-    fetchTrends();
-  }, []);
+    if (user) {
+      fetchTrends();
+    }
+  }, [user]);
 
   return (
     <div className="home">
