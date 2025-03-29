@@ -29,6 +29,6 @@
 
   # Handle all other requests through our Node.js application
   handle {
-    reverse_proxy localhost:3000
+    reverse_proxy localhost:3001
   }
 } 
