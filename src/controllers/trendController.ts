@@ -18,10 +18,11 @@ const xApiService = new XApiService();
 const openAIService = new OpenAIService();
 
 // Get trending data for user
-export const getTrends = async (req: Request, res: Response) => {
+export const getTrends = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.session?.user?.accessToken) {
-      return res.status(401).json({ error: 'No access token available' });
+      res.status(401).json({ error: 'No access token available' });
+      return;
     }
 
     const trends = await xApiService.getTrendingTopics(req.session.user.accessToken);
@@ -33,16 +34,18 @@ export const getTrends = async (req: Request, res: Response) => {
 };
 
 // Search last trend
-export const searchLastTrend = async (req: Request, res: Response) => {
+export const searchLastTrend = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.session?.user?.accessToken) {
-      return res.status(401).json({ error: 'No access token available' });
+      res.status(401).json({ error: 'No access token available' });
+      return;
     }
 
     // Get the last trend from local storage
     const lastTrend = await getLastTrendFromStorage();
     if (!lastTrend) {
-      return res.status(404).json({ error: 'No previous trend found' });
+      res.status(404).json({ error: 'No previous trend found' });
+      return;
     }
 
     // Search for tweets related to the last trend

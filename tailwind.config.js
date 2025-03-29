@@ -8,6 +8,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Twitter Colors
+        'twitter-blue': '#1DA1F2',
+        'twitter-blue-hover': '#0d95e8',
+        'twitter-black': '#14171A',
+        'twitter-dark-gray': '#657786',
+        'twitter-light-gray': '#AAB8C2',
+        'twitter-extraLight': '#E1E8ED',
+        'twitter-extraExtraLight': '#F5F8FA',
+        'twitter-success': '#17bf63',
+        'twitter-error': '#e0245e',
+        
         // Synthwave Colors
         cerulean: '#00B4D8',
         'aqua-green': '#06D6A0',
