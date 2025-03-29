@@ -16,7 +16,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://clonex-trend-app.railway.internal/api/trends');
+      const response = await fetch('/api/trends');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -40,7 +40,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`https://clonex-trend-app.railway.internal/api/trends/analyze/${encodeURIComponent(trendName)}`);
+      const response = await fetch(`/api/trends/analyze/${encodeURIComponent(trendName)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -88,7 +88,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`https://clonex-trend-app.railway.internal/api/trends/process/${encodeURIComponent(trendName)}`, {
+      const response = await fetch(`/api/trends/process/${encodeURIComponent(trendName)}`, {
         method: 'POST',
       });
       
@@ -120,7 +120,7 @@ export default function Home({ user, onLogout }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://clonex-trend-app.railway.internal/api/trends/auto-process', {
+      const response = await fetch('/api/trends/auto-process', {
         method: 'POST',
       });
       
@@ -171,7 +171,7 @@ export default function Home({ user, onLogout }) {
     
     setLoading(true);
     try {
-      const response = await fetch('https://clonex-trend-app.railway.internal/api/trends/post', {
+      const response = await fetch('/api/trends/post', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,7 +328,7 @@ export default function Home({ user, onLogout }) {
         <div className="auth-prompt">
           <button 
             onClick={() => {
-              window.location.href = 'https://clonex-trend-app.railway.internal/api/auth/login';
+              window.location.href = 'https://clonex-trend-app-production.up.railway.app/api/auth/login';
             }}
             className="btn primary"
           >

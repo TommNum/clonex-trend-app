@@ -11,4 +11,3 @@ restartPolicyMaxRetries = 3
 
 [deploy.env]
 NODE_ENV = "production"
-API_URL="clonex-trend-app.railway.internal"
