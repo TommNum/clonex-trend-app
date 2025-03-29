@@ -78,12 +78,18 @@ export class XApiService {
       throw new Error('Callback URL not configured');
     }
 
-    console.log('Exchanging code for tokens with callback:', this.callbackUrl);
+    console.log('Exchanging code for tokens with:', {
+      callbackUrl: this.callbackUrl,
+      codeLength: code.length,
+      codeVerifierLength: codeVerifier.length
+    });
+
+    // Create Basic Auth header
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
     const params = new URLSearchParams();
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
-    params.append('client_id', this.clientId);
-    params.append('client_secret', this.clientSecret);
     params.append('redirect_uri', this.callbackUrl);
     params.append('code_verifier', codeVerifier);
 
@@ -92,6 +98,7 @@ export class XApiService {
       const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${auth}`
         },
       });
       console.log('Token exchange successful');
@@ -105,7 +112,8 @@ export class XApiService {
       if (axios.isAxiosError(error)) {
         console.error('Response data:', error.response?.data);
         console.error('Response status:', error.response?.status);
-        throw new Error(`Failed to exchange code for tokens: ${error.response?.data?.error || 'Unknown error'}`);
+        console.error('Response headers:', error.response?.headers);
+        throw new Error(`Failed to exchange code for tokens: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
       }
       throw error;
     }
@@ -116,15 +124,18 @@ export class XApiService {
     accessToken: string;
     expiresIn: number;
   }> {
+    // Create Basic Auth header
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
     const params = new URLSearchParams();
     params.append('refresh_token', refreshToken);
     params.append('grant_type', 'refresh_token');
-    params.append('client_id', this.clientId);
 
     try {
       const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${auth}`
         },
       });
 
@@ -134,7 +145,12 @@ export class XApiService {
       };
     } catch (error) {
       console.error('Error refreshing token:', error);
-      throw new Error('Failed to refresh token');
+      if (axios.isAxiosError(error)) {
+        console.error('Response data:', error.response?.data);
+        console.error('Response status:', error.response?.status);
+        throw new Error(`Failed to refresh token: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
+      }
+      throw error;
     }
   }
 
