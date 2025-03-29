@@ -20,13 +20,68 @@ const openAIService = new OpenAIService();
 // Get trending data for user
 export const getTrends = async (req: Request, res: Response) => {
   try {
-    const trends = await xApiService.getTrendingTopics(req.user.accessToken);
+    if (!req.session?.user?.accessToken) {
+      return res.status(401).json({ error: 'No access token available' });
+    }
+
+    const trends = await xApiService.getTrendingTopics(req.session.user.accessToken);
     res.json(trends);
   } catch (error) {
     console.error('Error fetching trends:', error);
     res.status(500).json({ error: 'Failed to fetch trends' });
   }
 };
+
+// Search last trend
+export const searchLastTrend = async (req: Request, res: Response) => {
+  try {
+    if (!req.session?.user?.accessToken) {
+      return res.status(401).json({ error: 'No access token available' });
+    }
+
+    // Get the last trend from local storage
+    const lastTrend = await getLastTrendFromStorage();
+    if (!lastTrend) {
+      return res.status(404).json({ error: 'No previous trend found' });
+    }
+
+    // Search for tweets related to the last trend
+    const searchResults = await xApiService.searchTrendMedia(req.session.user.accessToken, lastTrend);
+    
+    // Process with OpenAI
+    const processedTrend = await openAIService.analyzeTrendAndMedia(lastTrend);
+    processedTrend.mediaItems = searchResults;
+
+    res.json(processedTrend);
+  } catch (error) {
+    console.error('Error searching last trend:', error);
+    res.status(500).json({ error: 'Failed to search last trend' });
+  }
+};
+
+// Store last trend in local storage
+async function getLastTrendFromStorage(): Promise<PersonalizedTrend | null> {
+  try {
+    const data = await fs.promises.readFile(path.join(__dirname, '../data/lastTrend.json'), 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading last trend:', error);
+    return null;
+  }
+}
+
+// Store last trend in local storage
+async function storeLastTrend(trend: PersonalizedTrend): Promise<void> {
+  try {
+    await fs.promises.mkdir(path.join(__dirname, '../data'), { recursive: true });
+    await fs.promises.writeFile(
+      path.join(__dirname, '../data/lastTrend.json'),
+      JSON.stringify(trend, null, 2)
+    );
+  } catch (error) {
+    console.error('Error storing last trend:', error);
+  }
+}
 
 // Analyze a specific trend
 export const getTrendDetails = async (req: Request, res: Response): Promise<void> => {

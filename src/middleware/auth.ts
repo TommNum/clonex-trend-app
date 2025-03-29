@@ -290,6 +290,18 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
     return true;
   };
 
+  // Ensure user data is available
+  req.user = {
+    id: req.session.user.id,
+    username: req.session.user.username,
+    email: req.session.user.email,
+    profileImageUrl: req.session.user.profileImageUrl,
+    accessToken: req.session.user.accessToken,
+    refreshToken: req.session.user.refreshToken,
+    tokenExpiry: req.session.user.tokenExpiry,
+    role: req.session.user.role
+  };
+
   next();
 };
 
