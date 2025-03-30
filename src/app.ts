@@ -65,18 +65,6 @@ app.use(session({
   rolling: true // Update session on every request
 }));
 
-// Trust proxy for secure cookies
-app.set('trust proxy', 1);
-
-// Add security headers
-app.use((req, res, next) => {
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
-
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/css', express.static(path.join(__dirname, '../public/css')));
@@ -91,8 +79,8 @@ app.use('/api/trends', trendRoutes);
 
 // Home route
 app.get('/', (req, res) => {
-  res.render('index', { 
-    user: req.session.user || null 
+  res.render('index', {
+    user: req.session.user || null
   });
 });
 
@@ -106,8 +94,8 @@ app.get('/dashboard', async (req, res) => {
     // Get active trends count
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
     const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-    
-    res.render('dashboard', { 
+
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: trends.length || 0
@@ -115,7 +103,78 @@ app.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', { 
+    res.render('dashboard', {
+      user: req.session.user,
+      stats: {
+        activeTrends: 0
+      }
+    });
+  }
+});
+
+// Function to store processed trends
+async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
+  try {
+    // Here you would implement your storage logic
+    // For example, saving to a database or file
+    console.log(`Storing processed trend: ${processedTrend.trendName}`);
+  } catch (error) {
+    console.error('Error storing trend:', error);
+  }
+}
+
+// Schedule trend analysis
+cron.schedule('0 */4 * * *', async () => {
+  try {
+    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
+    if (!systemAccessToken) {
+      console.error('System access token not configured');
+      return;
+    }
+
+    const trends = await xApiService.getTrendingTopics(systemAccessToken);
+    for (const trend of trends) {
+      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
+      const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
+      processedTrend.mediaItems = searchResults;
+
+      if (processedTrend.processingSuitability >= 75) {
+        // Store high-suitability trends for later processing
+        await storeTrend(processedTrend);
+      }
+    }
+  } catch (error) {
+    console.error('Error in scheduled trend analysis:', error);
+  }
+});
+
+// Home route
+app.get('/', (req, res) => {
+  res.render('index', {
+    user: req.session.user || null
+  });
+});
+
+// Dashboard route
+app.get('/dashboard', async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/auth/login');
+  }
+
+  try {
+    // Get active trends count
+    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
+    const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
+
+    res.render('dashboard', {
+      user: req.session.user,
+      stats: {
+        activeTrends: trends.length || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: 0
