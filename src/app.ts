@@ -47,7 +47,7 @@ const upload = multer({ storage });
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://talented-miracle-production.up.railway.app', 'https://trend-avatar-frontend-production.up.railway.app']
+    ? 'https://talented-miracle-production.up.railway.app'
     : 'http://localhost:5173',
   credentials: true
 }));
