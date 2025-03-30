@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/trends');
             const trends = await response.json();
 
-            if (trends.length === 0) {
+            if (!trends.length || !Array.isArray(trends)) {
                 trendsContainer.innerHTML = '<p>No trends found. Try refreshing!</p>';
                 return;
             }
