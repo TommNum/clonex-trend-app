@@ -45,7 +45,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://talented-miracle-production.up.railway.app', 'https://trend-avatar-frontend-production.up.railway.app']
+    : 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -54,16 +59,24 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Always use secure cookies in production
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: 'lax',
-    httpOnly: true,
-    domain: process.env.NODE_ENV === 'production' ? '.railway.app' : undefined
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  proxy: true, // Trust the proxy
-  name: 'sessionId', // Explicitly set session name
-  rolling: true // Update session on every request
+  name: 'sessionId'
 }));
+
+// Trust proxy for secure cookies
+app.set('trust proxy', 1);
+
+// Add security headers
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
