@@ -289,7 +289,8 @@ export class XApiService {
 
   async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/trends/place.json?id=1`, {
+      console.log('[X API] Fetching trending topics...');
+      const response = await axios.get('https://api.twitter.com/1.1/trends/place.json?id=1', {
         headers: this.getHeaders(accessToken)
       });
 
@@ -307,9 +308,13 @@ export class XApiService {
         url: trend.url
       }));
 
+      console.log('[X API] Successfully retrieved trends:', trends.length);
       return trends;
     } catch (error) {
       console.error('[X API] Error:', error instanceof Error ? error.message : 'Unknown error');
+      if (axios.isAxiosError(error)) {
+        console.error('[X API] Response:', error.response?.data);
+      }
       throw error;
     }
   }
