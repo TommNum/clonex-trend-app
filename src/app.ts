@@ -64,8 +64,13 @@ app.use(session({
 app.use('/auth', authRoutes);
 app.use('/api/trends', trendRoutes);
 
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve frontend application
+app.use(express.static(path.join(__dirname, '../../trend-avatar-frontend/dist')));
+
+// Handle all other routes by serving the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../trend-avatar-frontend/dist/index.html'));
+});
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
