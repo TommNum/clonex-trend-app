@@ -290,7 +290,7 @@ export class XApiService {
   async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
       console.log('[X API] Fetching trending topics...');
-      const response = await axios.get('https://api.twitter.com/1.1/trends/place.json?id=1', {
+      const response = await axios.get(`${this.baseUrl}/users/personalized_trends/`, {
         headers: this.getHeaders(accessToken)
       });
 
