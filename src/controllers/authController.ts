@@ -93,7 +93,6 @@ export const callback = async (req: Request, res: Response) => {
     const user: User = {
       id: userInfo.id,
       username: userInfo.username,
-      email: userInfo.email || '',
       profileImageUrl: userInfo.profileImageUrl,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

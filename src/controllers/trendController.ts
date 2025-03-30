@@ -26,7 +26,7 @@ export const getTrends = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const trends = await xApiService.getTrendingTopics(req.session.user.accessToken);
+    const trends = await xApiService.getPersonalizedTrends(req.session.user.accessToken);
     res.json(trends);
   } catch (error) {
     console.error('[Trends] Error:', error instanceof Error ? error.message : 'Unknown error');
@@ -91,7 +91,7 @@ async function storeLastTrend(trend: PersonalizedTrend): Promise<void> {
 export const getTrendDetails = async (req: Request, res: Response): Promise<void> => {
   try {
     const { trendId } = req.params;
-    const trends = await xApiService.getTrendingTopics(req.user.accessToken);
+    const trends = await xApiService.getPersonalizedTrends(req.user.accessToken);
     const trend = trends.find(t => t.id === trendId);
 
     if (!trend) {
@@ -114,7 +114,7 @@ export const getTrendDetails = async (req: Request, res: Response): Promise<void
 export const swapTrendMedia = async (req: Request, res: Response): Promise<void> => {
   try {
     const { trendId } = req.params;
-    const trends = await xApiService.getTrendingTopics(req.user.accessToken);
+    const trends = await xApiService.getPersonalizedTrends(req.user.accessToken);
     const trend = trends.find(t => t.id === trendId);
 
     if (!trend) {
@@ -189,7 +189,7 @@ export const autoProcessTrend = async (req: Request, res: Response): Promise<voi
     }
 
     const { trendId } = req.params;
-    const trends = await xApiService.getTrendingTopics(req.user.accessToken);
+    const trends = await xApiService.getPersonalizedTrends(req.user.accessToken);
     const trend = trends.find(t => t.id === trendId);
 
     if (!trend) {
