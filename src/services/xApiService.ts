@@ -44,8 +44,14 @@ export class XApiService {
       throw new Error('Callback URL not configured');
     }
 
-    console.log('Generating auth URL with callback:', this.callbackUrl);
-    const codeVerifier = crypto.randomBytes(32).toString('hex');
+    // Generate code verifier (32 bytes = 256 bits)
+    const codeVerifier = crypto.randomBytes(32)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    // Generate code challenge
     const codeChallenge = crypto.createHash('sha256')
       .update(codeVerifier)
       .digest('base64')
@@ -53,6 +59,7 @@ export class XApiService {
       .replace(/\//g, '_')
       .replace(/=/g, '');
 
+    // Generate state for CSRF protection
     const state = crypto.randomBytes(16).toString('hex');
 
     const authUrl = new URL('https://x.com/i/oauth2/authorize');
@@ -64,7 +71,6 @@ export class XApiService {
     authUrl.searchParams.append('code_challenge', codeChallenge);
     authUrl.searchParams.append('code_challenge_method', 'S256');
 
-    console.log('Generated auth URL:', authUrl.toString());
     return { url: authUrl.toString(), codeVerifier };
   }
 
@@ -78,12 +84,6 @@ export class XApiService {
       throw new Error('Callback URL not configured');
     }
 
-    console.log('Exchanging code for tokens with:', {
-      callbackUrl: this.callbackUrl,
-      codeLength: code.length,
-      codeVerifierLength: codeVerifier.length
-    });
-
     // Create Basic Auth header
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
@@ -94,14 +94,13 @@ export class XApiService {
     params.append('code_verifier', codeVerifier);
 
     try {
-      console.log('Making token request to X API');
       const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${auth}`
         },
       });
-      console.log('Token exchange successful');
+
       return {
         accessToken: response.data.access_token,
         refreshToken: response.data.refresh_token,
@@ -111,8 +110,6 @@ export class XApiService {
       console.error('Error exchanging code for tokens:', error);
       if (axios.isAxiosError(error)) {
         console.error('Response data:', error.response?.data);
-        console.error('Response status:', error.response?.status);
-        console.error('Response headers:', error.response?.headers);
         throw new Error(`Failed to exchange code for tokens: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
       }
       throw error;
@@ -289,26 +286,27 @@ export class XApiService {
 
   async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      console.log('[X API] Fetching trending topics...');
-      const response = await axios.get(`${this.baseUrl}/users/personalized_trends/`, {
-        headers: this.getHeaders(accessToken)
+      const response = await axios.get('https://api.x.com/2/users/personalized_trends', {
+        headers: this.getHeaders(accessToken),
+        params: {
+          'personalized_trend.fields': 'category,post_count,trend_name,trending_since'
+        }
       });
 
-      if (!response.data?.[0]?.trends) {
+      if (!response.data?.data) {
         console.error('[X API] Invalid response format');
         throw new Error('Invalid response format from X API');
       }
 
-      const trends = response.data[0].trends.map((trend: any) => ({
-        id: trend.query.replace(/^#/, ''),
-        name: trend.name,
-        query: trend.query,
-        tweet_volume: trend.tweet_volume || 0,
-        post_count: trend.tweet_volume || 0,
-        url: trend.url
+      const trends = response.data.data.map((trend: any) => ({
+        id: trend.trend_name,
+        name: trend.trend_name,
+        query: trend.trend_name,
+        tweet_volume: trend.post_count || 0,
+        post_count: trend.post_count || 0,
+        url: `https://x.com/search?q=${encodeURIComponent(trend.trend_name)}`
       }));
 
-      console.log('[X API] Successfully retrieved trends:', trends.length);
       return trends;
     } catch (error) {
       console.error('[X API] Error:', error instanceof Error ? error.message : 'Unknown error');
