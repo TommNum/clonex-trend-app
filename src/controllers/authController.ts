@@ -17,18 +17,18 @@ export const login = (req: Request, res: Response) => {
     console.log('Environment:', process.env.NODE_ENV);
     console.log('Callback URL:', process.env.X_CALLBACK_URL);
     console.log('Session before auth URL generation:', req.session);
-    
+
     const { url, codeVerifier } = xApiService.generateAuthUrl();
     console.log('Generated code verifier:', codeVerifier);
     console.log('Generated auth URL:', url);
-    
+
     req.session.codeVerifier = codeVerifier;
     console.log('Session after setting code verifier:', req.session);
-    
+
     res.redirect(url);
   } catch (error) {
     console.error('Error in login:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to start login process',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -48,7 +48,7 @@ export const callback = async (req: Request, res: Response) => {
       codeVerifier: req.session.codeVerifier,
       user: req.session.user
     });
-    
+
     const { code, state, error } = req.query;
     const { codeVerifier } = req.session;
 
@@ -58,13 +58,13 @@ export const callback = async (req: Request, res: Response) => {
     }
 
     if (!code || !codeVerifier) {
-      console.error('Missing required parameters:', { 
-        code: !!code, 
+      console.error('Missing required parameters:', {
+        code: !!code,
         codeVerifier: !!codeVerifier,
         sessionId: req.session.id,
         sessionExists: !!req.session
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing code or code verifier',
         details: {
           hasCode: !!code,
@@ -77,24 +77,27 @@ export const callback = async (req: Request, res: Response) => {
     console.log('Attempting to exchange code for token');
     console.log('Code:', code);
     console.log('Code verifier length:', codeVerifier.length);
-    
-    const userInfo = await xApiService.exchangeCodeForToken(code.toString(), codeVerifier);
+
+    const tokens = await xApiService.getTokens(code.toString(), codeVerifier);
     console.log('Successfully exchanged code for token');
+
+    // Get user info using the access token
+    const userInfo = await xApiService.getUserInfo(tokens.accessToken);
     console.log('User info:', {
       id: userInfo.id,
       username: userInfo.username,
-      hasAccessToken: !!userInfo.accessToken,
-      hasRefreshToken: !!userInfo.refreshToken
+      hasAccessToken: !!tokens.accessToken,
+      hasRefreshToken: !!tokens.refreshToken
     });
 
     const user: User = {
       id: userInfo.id,
       username: userInfo.username,
-      email: userInfo.email,
+      email: userInfo.email || '',
       profileImageUrl: userInfo.profileImageUrl,
-      accessToken: userInfo.accessToken,
-      refreshToken: userInfo.refreshToken,
-      tokenExpiry: userInfo.tokenExpiry,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      tokenExpiry: Math.floor(Date.now() / 1000) + tokens.expiresIn,
       role: 'user'
     };
 
@@ -105,7 +108,7 @@ export const callback = async (req: Request, res: Response) => {
     console.error('=== Callback Error ===');
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    
+
     if (axios.isAxiosError(error)) {
       console.error('Axios error details:', {
         status: error.response?.status,
@@ -113,12 +116,12 @@ export const callback = async (req: Request, res: Response) => {
         data: error.response?.data,
         headers: error.response?.headers
       });
-      return res.status(error.response?.status || 500).json({ 
+      return res.status(error.response?.status || 500).json({
         error: 'Authentication failed',
         details: error.response?.data || 'Unknown error'
       });
     }
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Authentication failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     });

@@ -91,8 +91,8 @@ app.use('/api/trends', trendRoutes);
 
 // Home route
 app.get('/', (req, res) => {
-  res.render('index', { 
-    user: req.session.user || null 
+  res.render('index', {
+    user: req.session.user || null
   });
 });
 
@@ -105,9 +105,9 @@ app.get('/dashboard', async (req, res) => {
   try {
     // Get active trends count
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-    
-    res.render('dashboard', { 
+    const trends = systemAccessToken ? await xApiService.getPersonalizedTrends(systemAccessToken) : [];
+
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: trends.length || 0
@@ -115,7 +115,7 @@ app.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', { 
+    res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: 0
@@ -144,7 +144,7 @@ cron.schedule('0 */4 * * *', async () => {
       return;
     }
 
-    const trends = await xApiService.getTrendingTopics(systemAccessToken);
+    const trends = await xApiService.getPersonalizedTrends(systemAccessToken);
     for (const trend of trends) {
       const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
       const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
