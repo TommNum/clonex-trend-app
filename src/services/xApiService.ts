@@ -13,16 +13,16 @@ export class XApiService {
     this.baseUrl = 'https://api.twitter.com/2';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
-
+    
     // Format callback URL properly
     let callbackUrl = process.env.X_CALLBACK_URL || '';
     if (!callbackUrl) {
-      callbackUrl = 'https://talented-miracle-production.up.railway.app/api/auth/callback';
+      callbackUrl = `${process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3000'}/auth/callback`;
     }
-
+    
     // Remove any @ symbol if present
     this.callbackUrl = callbackUrl.replace(/^@/, '');
-
+    
     if (!this.clientId || !this.clientSecret) {
       throw new Error('X API credentials not configured');
     }
@@ -32,7 +32,7 @@ export class XApiService {
       clientId: this.clientId ? '***' + this.clientId.slice(-4) : 'not set',
       callbackUrl: this.callbackUrl
     });
-
+    
     this.client = axios.create({
       baseURL: this.baseUrl,
     });
@@ -54,7 +54,7 @@ export class XApiService {
       .replace(/=/g, '');
 
     const state = crypto.randomBytes(16).toString('hex');
-
+    
     const authUrl = new URL('https://x.com/i/oauth2/authorize');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', this.clientId);
@@ -276,7 +276,7 @@ export class XApiService {
   }> {
     const tokens = await this.getTokens(code, codeVerifier);
     const userInfo = await this.getUserInfo(tokens.accessToken);
-
+    
     return {
       id: userInfo.id,
       username: userInfo.username,
@@ -290,7 +290,7 @@ export class XApiService {
   async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
       console.log('Fetching trending topics with token:', accessToken ? '***' + accessToken.slice(-4) : 'not set');
-
+      
       const response = await this.client.get('/trends/place.json?id=1', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -299,7 +299,7 @@ export class XApiService {
       });
 
       console.log('Trends API response:', response.data);
-
+      
       if (!response.data || !Array.isArray(response.data[0]?.trends)) {
         console.error('Invalid trends response format:', response.data);
         return [];
