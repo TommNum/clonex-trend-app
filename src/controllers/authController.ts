@@ -28,7 +28,7 @@ export const login = (req: Request, res: Response) => {
     res.redirect(url);
   } catch (error) {
     console.error('Error in login:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Failed to start login process',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
