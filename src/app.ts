@@ -125,17 +125,6 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-// Function to store processed trends
-async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
-  try {
-    // Here you would implement your storage logic
-    // For example, saving to a database or file
-    console.log(`Storing processed trend: ${processedTrend.trendName}`);
-  } catch (error) {
-    console.error('Error storing trend:', error);
-  }
-}
-
 // Schedule trend analysis
 cron.schedule('0 */4 * * *', async () => {
   try {
