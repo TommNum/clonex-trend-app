@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { XApiService } from '../services/xApiService';
 import { OpenAIService } from '../services/openaiService';
-import { 
-  PersonalizedTrend, 
-  ProcessedTrend, 
+import {
+  PersonalizedTrend,
+  ProcessedTrend,
   MediaSwapResult,
   TrendAnalysis,
   XSearchResult
@@ -21,6 +21,7 @@ const openAIService = new OpenAIService();
 export const getTrends = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.session?.user?.accessToken) {
+      console.log('[Trends] No access token in session');
       res.status(401).json({ error: 'No access token available' });
       return;
     }
@@ -28,7 +29,7 @@ export const getTrends = async (req: Request, res: Response): Promise<void> => {
     const trends = await xApiService.getTrendingTopics(req.session.user.accessToken);
     res.json(trends);
   } catch (error) {
-    console.error('Error fetching trends:', error);
+    console.error('[Trends] Error:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({ error: 'Failed to fetch trends' });
   }
 };
@@ -50,7 +51,7 @@ export const searchLastTrend = async (req: Request, res: Response): Promise<void
 
     // Search for tweets related to the last trend
     const searchResults = await xApiService.searchTrendMedia(req.session.user.accessToken, lastTrend);
-    
+
     // Process with OpenAI
     const processedTrend = await openAIService.analyzeTrendAndMedia(lastTrend);
     processedTrend.mediaItems = searchResults;
@@ -190,7 +191,7 @@ export const autoProcessTrend = async (req: Request, res: Response): Promise<voi
     const { trendId } = req.params;
     const trends = await xApiService.getTrendingTopics(req.user.accessToken);
     const trend = trends.find(t => t.id === trendId);
-    
+
     if (!trend) {
       res.status(404).json({ error: 'Trend not found' });
       return;

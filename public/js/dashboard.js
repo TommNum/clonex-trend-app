@@ -15,7 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             trendsContainer.innerHTML = '<p class="loading">Loading trends...</p>';
             const response = await fetch('/api/trends');
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error:', response.status, errorText);
+                throw new Error(`API Error: ${response.status}`);
+            }
+            
             const trends = await response.json();
+            console.log('Trends received:', trends.length);
 
             if (!trends.length || !Array.isArray(trends)) {
                 trendsContainer.innerHTML = '<p>No trends found. Try refreshing!</p>';
