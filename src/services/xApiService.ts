@@ -51,7 +51,7 @@ export class XApiService {
       .replace(/\//g, '_')
       .replace(/=/g, '');
 
-    // Generate code challenge
+    // Generate code challenge using S256 method
     const codeChallenge = crypto.createHash('sha256')
       .update(codeVerifier)
       .digest('base64')
@@ -66,7 +66,7 @@ export class XApiService {
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', this.clientId);
     authUrl.searchParams.append('redirect_uri', this.callbackUrl);
-    authUrl.searchParams.append('scope', 'tweet.read tweet.write users.read offline.access');
+    authUrl.searchParams.append('scope', 'tweet.read users.read offline.access');
     authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('code_challenge', codeChallenge);
     authUrl.searchParams.append('code_challenge_method', 'S256');
@@ -84,7 +84,7 @@ export class XApiService {
       throw new Error('Callback URL not configured');
     }
 
-    // Create Basic Auth header
+    // Create Basic Auth header for confidential client
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
     const params = new URLSearchParams();
@@ -100,6 +100,10 @@ export class XApiService {
           'Authorization': `Basic ${auth}`
         },
       });
+
+      if (!response.data.access_token) {
+        throw new Error('No access token in response');
+      }
 
       return {
         accessToken: response.data.access_token,
@@ -121,7 +125,7 @@ export class XApiService {
     accessToken: string;
     expiresIn: number;
   }> {
-    // Create Basic Auth header
+    // Create Basic Auth header for confidential client
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
     const params = new URLSearchParams();
@@ -136,6 +140,10 @@ export class XApiService {
         },
       });
 
+      if (!response.data.access_token) {
+        throw new Error('No access token in response');
+      }
+
       return {
         accessToken: response.data.access_token,
         expiresIn: response.data.expires_in,
@@ -144,7 +152,6 @@ export class XApiService {
       console.error('Error refreshing token:', error);
       if (axios.isAxiosError(error)) {
         console.error('Response data:', error.response?.data);
-        console.error('Response status:', error.response?.status);
         throw new Error(`Failed to refresh token: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
       }
       throw error;
@@ -181,20 +188,33 @@ export class XApiService {
   // Get personalized trends for user
   async getPersonalizedTrends(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/trends/place.json?id=1`, {
-        headers: this.getHeaders(accessToken)
+      const response = await axios.get('https://api.x.com/2/users/personalized_trends', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        params: {
+          'personalized_trend.fields': 'category,post_count,trend_name,trending_since'
+        }
       });
 
-      return response.data[0].trends.map((trend: any) => ({
-        id: trend.query.replace(/^#/, ''),
-        name: trend.name,
-        query: trend.query,
-        tweet_volume: trend.tweet_volume || 0,
-        post_count: trend.tweet_volume || 0,
-        url: trend.url
+      if (!response.data?.data) {
+        console.error('[X API] Invalid response format');
+        throw new Error('Invalid response format from X API');
+      }
+
+      return response.data.data.map((trend: any) => ({
+        id: trend.trend_name,
+        name: trend.trend_name,
+        query: trend.trend_name,
+        tweet_volume: trend.post_count || 0,
+        post_count: trend.post_count || 0,
+        url: `https://x.com/search?q=${encodeURIComponent(trend.trend_name)}`
       }));
     } catch (error) {
-      console.error('Error fetching trends:', error);
+      console.error('[X API] Error:', error instanceof Error ? error.message : 'Unknown error');
+      if (axios.isAxiosError(error)) {
+        console.error('[X API] Response:', error.response?.data);
+      }
       throw error;
     }
   }
@@ -262,56 +282,27 @@ export class XApiService {
     }
   }
 
-  async exchangeCodeForToken(code: string, codeVerifier: string): Promise<{
-    id: string;
-    username: string;
-    email?: string;
-    profileImageUrl?: string;
-    accessToken: string;
-    refreshToken: string;
-    tokenExpiry: number;
-  }> {
-    const tokens = await this.getTokens(code, codeVerifier);
-    const userInfo = await this.getUserInfo(tokens.accessToken);
+  // Revoke access token
+  async revokeToken(token: string): Promise<void> {
+    // Create Basic Auth header for confidential client
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
-    return {
-      id: userInfo.id,
-      username: userInfo.username,
-      profileImageUrl: userInfo.profileImageUrl,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      tokenExpiry: Math.floor(Date.now() / 1000) + tokens.expiresIn
-    };
-  }
+    const params = new URLSearchParams();
+    params.append('token', token);
+    params.append('client_id', this.clientId);
 
-  async getTrendingTopics(accessToken: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get('https://api.x.com/2/users/personalized_trends', {
-        headers: this.getHeaders(accessToken),
-        params: {
-          'personalized_trend.fields': 'category,post_count,trend_name,trending_since'
-        }
+      await axios.post('https://api.x.com/2/oauth2/revoke', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${auth}`
+        },
       });
-
-      if (!response.data?.data) {
-        console.error('[X API] Invalid response format');
-        throw new Error('Invalid response format from X API');
-      }
-
-      const trends = response.data.data.map((trend: any) => ({
-        id: trend.trend_name,
-        name: trend.trend_name,
-        query: trend.trend_name,
-        tweet_volume: trend.post_count || 0,
-        post_count: trend.post_count || 0,
-        url: `https://x.com/search?q=${encodeURIComponent(trend.trend_name)}`
-      }));
-
-      return trends;
     } catch (error) {
-      console.error('[X API] Error:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error revoking token:', error);
       if (axios.isAxiosError(error)) {
-        console.error('[X API] Response:', error.response?.data);
+        console.error('Response data:', error.response?.data);
+        throw new Error(`Failed to revoke token: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
       }
       throw error;
     }
@@ -330,4 +321,4 @@ export class XApiService {
   }
 }
 
-export default new XApiService(); 
+export default new XApiService();
