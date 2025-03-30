@@ -45,12 +45,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? 'https://talented-miracle-production.up.railway.app'
-    : 'http://localhost:5173',
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -59,11 +54,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    secure: true, // Always use secure cookies in production
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: 'lax',
+    httpOnly: true,
+    domain: process.env.NODE_ENV === 'production' ? '.railway.app' : undefined
   },
-  name: 'sessionId'
+  proxy: true, // Trust the proxy
+  name: 'sessionId', // Explicitly set session name
+  rolling: true // Update session on every request
 }));
 
 // Trust proxy for secure cookies
@@ -92,8 +91,8 @@ app.use('/api/trends', trendRoutes);
 
 // Home route
 app.get('/', (req, res) => {
-  res.render('index', {
-    user: req.session.user || null
+  res.render('index', { 
+    user: req.session.user || null 
   });
 });
 
@@ -107,8 +106,8 @@ app.get('/dashboard', async (req, res) => {
     // Get active trends count
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
     const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-
-    res.render('dashboard', {
+    
+    res.render('dashboard', { 
       user: req.session.user,
       stats: {
         activeTrends: trends.length || 0
@@ -116,67 +115,7 @@ app.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', {
-      user: req.session.user,
-      stats: {
-        activeTrends: 0
-      }
-    });
-  }
-});
-
-// Schedule trend analysis
-cron.schedule('0 */4 * * *', async () => {
-  try {
-    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    if (!systemAccessToken) {
-      console.error('System access token not configured');
-      return;
-    }
-
-    const trends = await xApiService.getTrendingTopics(systemAccessToken);
-    for (const trend of trends) {
-      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
-      const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
-      processedTrend.mediaItems = searchResults;
-
-      if (processedTrend.processingSuitability >= 75) {
-        // Store high-suitability trends for later processing
-        await storeTrend(processedTrend);
-      }
-    }
-  } catch (error) {
-    console.error('Error in scheduled trend analysis:', error);
-  }
-});
-
-// Home route
-app.get('/', (req, res) => {
-  res.render('index', {
-    user: req.session.user || null
-  });
-});
-
-// Dashboard route
-app.get('/dashboard', async (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/auth/login');
-  }
-
-  try {
-    // Get active trends count
-    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    const trends = systemAccessToken ? await xApiService.getTrendingTopics(systemAccessToken) : [];
-
-    res.render('dashboard', {
-      user: req.session.user,
-      stats: {
-        activeTrends: trends.length || 0
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.render('dashboard', {
+    res.render('dashboard', { 
       user: req.session.user,
       stats: {
         activeTrends: 0
