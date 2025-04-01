@@ -8,12 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const captionInput = document.getElementById('caption');
     const postToXBtn = document.getElementById('postToX');
 
-    let selectedTrend = null;
+    let selectedPost = null;
 
     // Fetch and display trends
     async function fetchTrends() {
         try {
-            trendsContainer.innerHTML = '<p class="loading">Loading trends...</p>';
+            trendsContainer.innerHTML = '<p class="loading">Loading timeline...</p>';
             const response = await fetch('/api/trends');
             
             if (!response.ok) {
@@ -22,64 +22,140 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`API Error: ${response.status}`);
             }
             
-            const trends = await response.json();
-            console.log('Trends received:', trends.length);
+            const posts = await response.json();
+            console.log('Posts received:', posts.length);
 
-            if (!trends.length || !Array.isArray(trends)) {
-                trendsContainer.innerHTML = '<p>No trends found. Try refreshing!</p>';
+            if (!posts.length || !Array.isArray(posts)) {
+                trendsContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
                 return;
             }
 
-            trendsContainer.innerHTML = trends.map(trend => `
-                <div class="trend-item" data-trend-id="${trend.id}">
-                    <div class="trend-name">${trend.name}</div>
-                    <div class="trend-meta">
-                        <span>${trend.tweetVolume} tweets</span>
-                        <span>${new Date(trend.createdAt).toLocaleDateString()}</span>
+            // Add CSS for the grid layout
+            const style = document.createElement('style');
+            style.textContent = `
+                .posts-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    gap: 20px;
+                    padding: 20px;
+                }
+                .post-card {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 12px;
+                    overflow: hidden;
+                    transition: transform 0.2s;
+                    cursor: pointer;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .post-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+                .post-image {
+                    width: 100%;
+                    height: 250px;
+                    object-fit: cover;
+                }
+                .post-content {
+                    padding: 15px;
+                }
+                .post-author {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 10px;
+                }
+                .author-avatar {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    margin-right: 8px;
+                }
+                .post-text {
+                    color: #E1E1E1;
+                    font-size: 14px;
+                    line-height: 1.4;
+                    margin-bottom: 10px;
+                }
+                .post-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    color: #888;
+                    font-size: 12px;
+                }
+                .engagement {
+                    display: flex;
+                    gap: 10px;
+                }
+            `;
+            document.head.appendChild(style);
+
+            trendsContainer.innerHTML = '<div class="posts-grid"></div>';
+            const grid = trendsContainer.querySelector('.posts-grid');
+
+            grid.innerHTML = posts.map(post => `
+                <div class="post-card" data-post-id="${post.id}">
+                    <img 
+                        src="${post.media_url}" 
+                        alt="${post.alt_text || 'Post image'}" 
+                        class="post-image"
+                        onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Available'"
+                    >
+                    <div class="post-content">
+                        <div class="post-author">
+                            <img 
+                                src="${post.author?.profile_image_url || 'https://via.placeholder.com/24'}" 
+                                alt="${post.author?.username || 'user'}"
+                                class="author-avatar"
+                            >
+                            <span>@${post.author?.username || 'user'}</span>
+                        </div>
+                        <div class="post-text">${post.query}</div>
+                        <div class="post-meta">
+                            <div class="engagement">
+                                <span>❤️ ${post.tweet_volume}</span>
+                                <span>🔄 ${post.post_count}</span>
+                            </div>
+                            <span>${new Date(post.created_at).toLocaleDateString()}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
 
-            // Add click handlers to trend items
-            document.querySelectorAll('.trend-item').forEach(item => {
-                item.addEventListener('click', () => selectTrend(item.dataset.trendId));
+            // Add click handlers to post cards
+            document.querySelectorAll('.post-card').forEach(card => {
+                card.addEventListener('click', () => selectPost(card.dataset.postId));
             });
 
         } catch (error) {
-            console.error('Error fetching trends:', error);
-            trendsContainer.innerHTML = '<p class="error">Error loading trends. Please try again.</p>';
+            console.error('Error fetching posts:', error);
+            trendsContainer.innerHTML = '<p class="error">Error loading posts. Please try again.</p>';
         }
     }
 
-    // Select a trend and show its media
-    async function selectTrend(trendId) {
+    // Select a post and show its media
+    async function selectPost(postId) {
         try {
             // Update selected state
-            document.querySelectorAll('.trend-item').forEach(item => {
-                item.classList.remove('selected');
-                if (item.dataset.trendId === trendId) {
-                    item.classList.add('selected');
+            document.querySelectorAll('.post-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.dataset.postId === postId) {
+                    card.classList.add('selected');
                 }
             });
 
-            const response = await fetch(`/api/trends/${trendId}/media`);
-            const media = await response.json();
+            selectedPost = postId;
+            const post = document.querySelector(`[data-post-id="${postId}"]`);
+            const mediaUrl = post.querySelector('.post-image').src;
 
-            if (media.length === 0) {
-                mediaPreview.innerHTML = '<p>No media found for this trend.</p>';
-                return;
-            }
-
-            selectedTrend = trendId;
             mediaPreview.innerHTML = `
-                <img src="${media[0].url}" alt="Trend media">
-                <div class="media-controls">
-                    <button class="btn secondary" onclick="processMedia('${media[0].id}')">Process This</button>
+                <img src="${mediaUrl}" alt="Selected media" style="max-width: 100%; border-radius: 12px;">
+                <div class="media-controls mt-4">
+                    <button class="btn secondary" onclick="processMedia('${postId}')">Process This</button>
                 </div>
             `;
 
         } catch (error) {
-            console.error('Error fetching trend media:', error);
+            console.error('Error selecting post:', error);
             mediaPreview.innerHTML = '<p class="error">Error loading media. Please try again.</p>';
         }
     }
@@ -87,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Process selected media
     async function processMedia(mediaId) {
         try {
-            const response = await fetch(`/api/trends/${selectedTrend}/process`, {
+            const response = await fetch(`/api/trends/${selectedPost}/process`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -116,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    trendId: selectedTrend,
+                    trendId: selectedPost,
                     caption: captionInput.value
                 })
             });
