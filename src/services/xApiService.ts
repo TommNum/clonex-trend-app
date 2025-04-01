@@ -369,28 +369,11 @@ export class XApiService {
           },
           params: {
             'max_results': 100,
-            'exclude': ['replies', 'retweets'],
-            'expansions': ['attachments.media_keys', 'author_id'],
-            'media.fields': [
-              'url',
-              'preview_image_url',
-              'height',
-              'width',
-              'type',
-              'alt_text',
-              'variants'
-            ],
-            'tweet.fields': [
-              'created_at',
-              'attachments',
-              'public_metrics',
-              'text'
-            ],
-            'user.fields': [
-              'profile_image_url',
-              'username',
-              'name'
-            ]
+            'exclude': 'replies,retweets',
+            'expansions': 'attachments.media_keys,author_id',
+            'media.fields': 'url,preview_image_url,height,width,type,alt_text,variants',
+            'tweet.fields': 'created_at,attachments,public_metrics,text',
+            'user.fields': 'profile_image_url,username,name'
           }
         }
       );
