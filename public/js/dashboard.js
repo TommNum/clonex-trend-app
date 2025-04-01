@@ -21,12 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Reset container constraints */
         .container, 
         .max-w-7xl,
-        main,
         .dashboard-content {
             max-width: none !important;
             width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
+        }
+
+        /* Main content area */
+        main {
+            margin-left: 256px !important;
+            width: calc(100% - 256px) !important;
+            padding: 2rem !important;
         }
 
         /* Grid layout styles */
