@@ -89,6 +89,21 @@ app.set('views', path.join(__dirname, '../views'));
 app.use('/auth', authRoutes);
 app.use('/api/trends', trendRoutes);
 
+// Add timeline endpoint
+app.get('/api/timeline', async (req, res) => {
+  if (!req.session.user?.accessToken || !req.session.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const posts = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
+    res.json(posts);
+  } catch (error) {
+    console.error('Error fetching timeline:', error);
+    res.status(500).json({ error: 'Failed to fetch timeline' });
+  }
+});
+
 // Home route
 app.get('/', (req, res) => {
   res.render('index', {
@@ -111,7 +126,8 @@ app.get('/dashboard', async (req, res) => {
       user: req.session.user,
       stats: {
         activeTrends: posts.length || 0
-      }
+      },
+      initialPosts: posts // Pass posts to template
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -119,7 +135,8 @@ app.get('/dashboard', async (req, res) => {
       user: req.session.user,
       stats: {
         activeTrends: 0
-      }
+      },
+      initialPosts: [] // Pass empty array if error
     });
   }
 });

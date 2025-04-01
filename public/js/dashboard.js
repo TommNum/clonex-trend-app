@@ -96,6 +96,54 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(globalStyle);
 
+    // Update button label
+    refreshTimelineBtn.textContent = 'Refresh Timeline';
+
+    // Function to render posts
+    function renderPosts(posts) {
+        if (!posts.length || !Array.isArray(posts)) {
+            timelineContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
+            return;
+        }
+
+        timelineContainer.innerHTML = '<div class="timeline-grid"></div>';
+        const grid = timelineContainer.querySelector('.timeline-grid');
+
+        grid.innerHTML = posts.map(post => `
+            <div class="post-card" data-post-id="${post.id}">
+                <img 
+                    src="${post.media_url}" 
+                    alt="${post.alt_text || 'Post image'}" 
+                    class="post-image"
+                    onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Available'"
+                >
+                <div class="post-content">
+                    <div class="post-author">
+                        <img 
+                            src="${post.author?.profile_image_url || 'https://via.placeholder.com/24'}" 
+                            alt="${post.author?.username || 'user'}"
+                            class="author-avatar"
+                        >
+                        <span>@${post.author?.username || 'user'}</span>
+                    </div>
+                    <div class="post-text">${post.query}</div>
+                    <div class="post-meta">
+                        <div class="engagement">
+                            <span>❤️ ${post.tweet_volume || 0}</span>
+                            <span>🔄 ${post.post_count || 0}</span>
+                        </div>
+                        <span>${post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Add click handlers to post cards
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', () => selectPost(card.dataset.postId));
+        });
+    }
+
     // Fetch and display timeline
     async function fetchTimeline() {
         try {
@@ -110,48 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const posts = await response.json();
             console.log('Timeline posts received:', posts.length);
-
-            if (!posts.length || !Array.isArray(posts)) {
-                timelineContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
-                return;
-            }
-
-            timelineContainer.innerHTML = '<div class="timeline-grid"></div>';
-            const grid = timelineContainer.querySelector('.timeline-grid');
-
-            grid.innerHTML = posts.map(post => `
-                <div class="post-card" data-post-id="${post.id}">
-                    <img 
-                        src="${post.media_url}" 
-                        alt="${post.alt_text || 'Post image'}" 
-                        class="post-image"
-                        onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Available'"
-                    >
-                    <div class="post-content">
-                        <div class="post-author">
-                            <img 
-                                src="${post.author?.profile_image_url || 'https://via.placeholder.com/24'}" 
-                                alt="${post.author?.username || 'user'}"
-                                class="author-avatar"
-                            >
-                            <span>@${post.author?.username || 'user'}</span>
-                        </div>
-                        <div class="post-text">${post.query}</div>
-                        <div class="post-meta">
-                            <div class="engagement">
-                                <span>❤️ ${post.tweet_volume || 0}</span>
-                                <span>🔄 ${post.post_count || 0}</span>
-                            </div>
-                            <span>${post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown date'}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Add click handlers to post cards
-            document.querySelectorAll('.post-card').forEach(card => {
-                card.addEventListener('click', () => selectPost(card.dataset.postId));
-            });
+            renderPosts(posts);
 
         } catch (error) {
             console.error('Error fetching timeline:', error);
@@ -261,6 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
     autoProcessBtn.addEventListener('click', autoProcessTrend);
     postToXBtn.addEventListener('click', postToX);
 
-    // Initial load
-    fetchTimeline();
+    // Initial render with server-provided data
+    if (typeof initialPosts !== 'undefined') {
+        renderPosts(initialPosts);
+    } else {
+        fetchTimeline(); // Fallback to fetching if no initial data
+    }
 }); 
