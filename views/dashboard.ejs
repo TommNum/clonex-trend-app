@@ -96,58 +96,46 @@
                                 <p class="text-sm font-medium text-gray-500">Posts Created</p>
                                 <p class="text-lg font-semibold text-gray-900"><%= stats.postsCreated %></p>
                             </div>
-<body>
-    <div class="container">
-        <header>
-            <h1>Trend Avatar Dashboard</h1>
-            <div class="user-bar">
-                <img src="<%= user.profileImageUrl %>" alt="<%= user.username %>" class="avatar">
-                <span>@<%= user.username %></span>
-                <a href="/auth/logout" class="btn secondary small">Logout</a>
-            </div>
-        </header>
-        
-        <main>
-            <div class="dashboard-actions">
-                <button id="refreshTrends" class="btn primary">Refresh Trends</button>
-                <button id="autoProcess" class="btn highlight">Auto-Process Trend</button>
-            </div>
-            
-            <div class="dashboard-content">
-                <div class="trends-panel">
-                    <h2>Your Personalized Trends</h2>
-                    <div id="trendsContainer" class="trends-container">
-                        <p class="loading">Loading trends...</p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="result-panel">
-                    <h2>Media Preview</h2>
-                    <div id="mediaPreview" class="media-preview">
-                        <p>Select a trend to preview media</p>
+                <div class="dashboard-content">
+                    <div class="trends-panel">
+                        <h2>Your Personalized Trends</h2>
+                        <div id="trendsContainer" class="trends-container">
+                            <p class="loading">Loading trends...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="result-panel">
+                        <h2>Media Preview</h2>
+                        <div id="mediaPreview" class="media-preview">
+                            <p>Select a trend to preview media</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div id="processResult" class="process-result hidden">
-                <h3>Ready to Post</h3>
-                <div class="result-content">
-                    <div class="result-image">
-                        <img id="resultImage" src="" alt="Processed Image">
+                
+                <div id="processResult" class="process-result hidden">
+                    <h3>Ready to Post</h3>
+                    <div class="result-content">
+                        <div class="result-image">
+                            <img id="resultImage" src="" alt="Processed Image">
+                        </div>
+                        <div class="result-caption">
+                            <textarea id="caption" rows="3" placeholder="Caption"></textarea>
+                        </div>
                     </div>
-                    <div class="result-caption">
-                        <textarea id="caption" rows="3" placeholder="Caption"></textarea>
-                    </div>
+                    <button id="postToX" class="btn primary">Post to X</button>
                 </div>
-                <button id="postToX" class="btn primary">Post to X</button>
             </div>
         </main>
-        
-        <footer>
-            <p>&copy; 2024 Trend Avatar App</p>
-        </footer>
     </div>
     
+    <script>
+        // Pass initial posts data from server
+        window.initialPosts = <%- JSON.stringify(initialPosts || []) %>;
+    </script>
     <script src="/js/dashboard.js"></script>
 </body>
 </html> 
