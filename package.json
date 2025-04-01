@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
-    "build": "tsc",
+    "build": "npm run build:css && tsc",
+    "build:css": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css",
+    "build:css:watch": "tailwindcss -i ./public/css/style.css -o ./public/css/tailwind.css --watch",
     "test": "jest",
     "lint": "eslint . --ext .ts"
   },
@@ -40,6 +42,7 @@
     "node-cron": "^3.0.3",
     "openai": "^4.28.0",
     "sharp": "^0.33.2",
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   },
   "devDependencies": {
@@ -50,8 +53,10 @@
     "@types/node-cron": "^3.0.11",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
+    "autoprefixer": "^10.4.17",
     "eslint": "^8.57.0",
     "nodemon": "^3.1.0",
+    "postcss": "^8.4.35",
     "ts-node": "^10.9.2"
   },
   "engines": {
