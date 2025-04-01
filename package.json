@@ -7,7 +7,6 @@
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
-    "test": "jest",
     "lint": "eslint . --ext .ts"
   },
   "repository": {
