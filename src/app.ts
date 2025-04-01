@@ -147,8 +147,10 @@ async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
     // Here you would implement your storage logic
     // For example, saving to a database or file
     console.log(`Storing processed trend: ${processedTrend.trendName}`);
+    return Promise.resolve();
   } catch (error) {
     console.error('Error storing trend:', error);
+    return Promise.reject(error);
   }
 }
 
