@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const refreshTimelineBtn = document.getElementById('refreshTrends');
-    const autoProcessBtn = document.getElementById('autoProcess');
     const timelineContainer = document.getElementById('trendsContainer');
     const mediaPreview = document.getElementById('mediaPreview');
     const processResult = document.getElementById('processResult');
@@ -102,14 +101,19 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(globalStyle);
 
-    // Update button label if it exists
+    // Add click handler for refresh button
     if (refreshTimelineBtn) {
-        refreshTimelineBtn.textContent = 'Refresh Timeline';
+        refreshTimelineBtn.addEventListener('click', fetchTimeline);
+    }
+
+    // Add click handler for post button
+    if (postToXBtn) {
+        postToXBtn.addEventListener('click', postToX);
     }
 
     // Function to render posts
     function renderPosts(posts) {
-        if (!posts.length || !Array.isArray(posts)) {
+        if (!Array.isArray(posts) || !posts.length) {
             timelineContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
             return;
         }
@@ -164,13 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/timeline');
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error:', response.status, errorText);
                 throw new Error(`API Error: ${response.status}`);
             }
             
             const posts = await response.json();
-            console.log('Timeline posts received:', posts.length);
+            console.log('Timeline posts received:', posts);
             renderPosts(posts);
 
         } catch (error) {
@@ -257,34 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Auto-process the most relevant trend
-    async function autoProcessTrend() {
-        try {
-            const response = await fetch('/api/trends/auto-process', {
-                method: 'POST'
-            });
-
-            const result = await response.json();
-            
-            resultImage.src = result.processedImageUrl;
-            captionInput.value = result.caption;
-            processResult.classList.remove('hidden');
-
-        } catch (error) {
-            console.error('Error auto-processing trend:', error);
-            alert('Error auto-processing trend. Please try again.');
-        }
-    }
-
-    // Event listeners
-    refreshTimelineBtn.addEventListener('click', fetchTimeline);
-    autoProcessBtn.addEventListener('click', autoProcessTrend);
-    postToXBtn.addEventListener('click', postToX);
-
-    // Initial render with server-provided data
-    if (typeof initialPosts !== 'undefined') {
-        renderPosts(initialPosts);
-    } else {
-        fetchTimeline(); // Fallback to fetching if no initial data
-    }
+    // Initialize the timeline
+    fetchTimeline();
 }); 
