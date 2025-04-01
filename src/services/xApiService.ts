@@ -2,25 +2,13 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { User, PersonalizedTrend, TrendMedia } from '../types';
 
-interface TimelineResponse {
-  data: TimelinePost[];
-  includes?: {
-    media?: TimelineMedia[];
-    users?: TimelineUser[];
-  };
-  meta?: {
-    result_count: number;
-    next_token?: string;
-  };
-}
-
 interface TimelinePost {
   id: string;
   text: string;
   author_id: string;
   created_at: string;
   attachments?: {
-    media_keys?: string[];
+    media_keys: string[];
   };
 }
 
@@ -28,16 +16,31 @@ interface TimelineMedia {
   media_key: string;
   type: string;
   url?: string;
-  preview_image_url?: string;
-  height?: number;
-  width?: number;
+  variants?: Array<{
+    bit_rate?: number;
+    url: string;
+  }>;
 }
 
 interface TimelineUser {
   id: string;
-  name: string;
   username: string;
-  profile_image_url?: string;
+  name: string;
+  profile_image_url: string;
+}
+
+interface TimelineIncludes {
+  media?: TimelineMedia[];
+  users?: TimelineUser[];
+}
+
+interface TimelineResponse {
+  data: TimelinePost[];
+  includes?: TimelineIncludes;
+}
+
+interface ApiResponse {
+  data: TimelineResponse;
 }
 
 export class XApiService {
@@ -48,7 +51,7 @@ export class XApiService {
   private client: any;
 
   constructor() {
-    this.baseUrl = 'https://api.twitter.com/2';
+    this.baseUrl = 'https://api.x.com/2';
     this.clientId = process.env.X_CLIENT_ID || '';
     this.clientSecret = process.env.X_CLIENT_SECRET || '';
 
@@ -361,80 +364,63 @@ export class XApiService {
   // Get user's timeline with media
   async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get(
-        `https://api.x.com/2/users/${userId}/timelines/reverse_chronological`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          params: {
-            'max_results': 100,
-            'exclude': 'replies,retweets',
-            'expansions': 'attachments.media_keys,author_id',
-            'media.fields': 'url,preview_image_url,height,width,type,alt_text,variants',
-            'tweet.fields': 'created_at,attachments,public_metrics,text',
-            'user.fields': 'profile_image_url,username,name'
-          }
+      const response = await axios.get<ApiResponse>(`${this.baseUrl}/users/${userId}/timelines/reverse_chronological`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        params: {
+          'tweet.fields': 'created_at,attachments,author_id',
+          'expansions': 'attachments.media_keys,author_id',
+          'media.fields': 'url,variants',
+          'user.fields': 'profile_image_url,name',
+          'exclude': 'replies,retweets'
         }
-      );
+      });
 
-      if (!response.data?.data) {
-        console.error('[X API] Invalid response format');
-        throw new Error('Invalid response format from X API');
-      }
+      const posts = response.data.data.data;
+      const includes = response.data.data.includes || {};
 
-      // Filter posts with media and convert to PersonalizedTrend format
-      const postsWithMedia = response.data.data.filter(post =>
+      const postsWithMedia = posts.filter((post: TimelinePost) =>
         post.attachments?.media_keys && post.attachments.media_keys.length > 0
       );
 
-      return postsWithMedia.map(post => {
+      return postsWithMedia.map((post: TimelinePost) => {
         const mediaKeys = post.attachments?.media_keys || [];
         const mediaItems = mediaKeys
-          .map(key => response.data.includes?.media?.find(m => m.media_key === key))
-          .filter(m => m && (m.type === 'photo' || m.type === 'animated_gif'));
+          .map((key: string) => includes.media?.find((m: TimelineMedia) => m.media_key === key))
+          .filter((m): m is TimelineMedia => m !== undefined && (m.type === 'photo' || m.type === 'animated_gif'));
 
         if (!mediaItems.length) return null;
 
         const media = mediaItems[0];
-        const author = response.data.includes?.users?.find(u => u.id === post.author_id);
+        const author = includes.users?.find((u: TimelineUser) => u.id === post.author_id);
 
-        // Get the best quality media URL
-        const mediaUrl = media.type === 'animated_gif' && media.variants?.length
+        const mediaUrl = media.type === 'animated_gif' && media.variants
           ? media.variants.sort((a, b) => (b.bit_rate || 0) - (a.bit_rate || 0))[0].url
-          : media.url || media.preview_image_url;
+          : media.url;
 
-        // Get engagement metrics
-        const metrics = post.public_metrics || {};
-        const engagement = (metrics.like_count || 0) + (metrics.repost_count || 0);
+        if (!mediaUrl) return null;
 
         return {
           id: post.id,
           name: `@${author?.username || 'unknown'}: ${post.text.slice(0, 50)}...`,
           query: post.text,
-          tweet_volume: metrics.like_count || 0,
-          post_count: metrics.repost_count || 0,
-          url: `https://x.com/${author?.username}/status/${post.id}`,
-          trend_name: post.text.slice(0, 50) + '...',
+          tweet_volume: 0,
+          post_count: 0,
+          url: `https://x.com/${author?.username || 'unknown'}/status/${post.id}`,
           media_url: mediaUrl,
-          width: media.width,
-          height: media.height,
-          alt_text: media.alt_text,
-          author: {
-            username: author?.username,
-            name: author?.name,
-            profile_image_url: author?.profile_image_url
-          },
           created_at: post.created_at,
-          engagement
+          author: author ? {
+            username: author.username,
+            name: author.name,
+            profile_image_url: author.profile_image_url
+          } : undefined,
+          alt_text: ''
         };
-      }).filter(Boolean) as PersonalizedTrend[];
+      }).filter((post): post is NonNullable<typeof post> => post !== null);
 
     } catch (error) {
-      console.error('[X API] Error:', error instanceof Error ? error.message : 'Unknown error');
-      if (axios.isAxiosError(error)) {
-        console.error('[X API] Response:', error.response?.data);
-      }
+      console.error('Error fetching user timeline:', error);
       throw error;
     }
   }

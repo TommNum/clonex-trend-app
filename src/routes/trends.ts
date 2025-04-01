@@ -1,8 +1,9 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { requireAuth, rateLimit } from '../middleware/auth';
 import * as trendController from '../controllers/trendController';
+import { AuthenticatedRequest } from '../controllers/trendController';
 
-const router = express.Router();
+const router = Router();
 
 // Logging middleware for all trend routes
 router.use((req, res, next) => {
@@ -14,11 +15,12 @@ router.use((req, res, next) => {
 const refreshRateLimit = rateLimit(1, 15 * 60 * 1000);
 
 // Get all trends
-router.get('/', requireAuth, async (req, res, next) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
         await trendController.getTrends(req, res);
     } catch (error) {
-        next(error);
+        console.error('Error in trends route:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

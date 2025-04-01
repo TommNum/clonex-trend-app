@@ -6,7 +6,8 @@ import {
   ProcessedTrend,
   MediaSwapResult,
   TrendAnalysis,
-  XSearchResult
+  XSearchResult,
+  User
 } from '../types';
 import axios from 'axios';
 import fs from 'fs';
@@ -17,22 +18,41 @@ const writeFileAsync = promisify(fs.writeFile);
 const xApiService = new XApiService();
 const openAIService = new OpenAIService();
 
-// Get trending data for user
-export const getTrends = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.session?.user?.accessToken || !req.session?.user?.id) {
-      console.log('[Trends] No access token or user ID in session');
-      res.status(401).json({ error: 'No access token or user ID available' });
-      return;
-    }
+// Add type for authenticated request
+export interface AuthenticatedRequest extends Request {
+  user?: User;
+}
 
-    const trends = await xApiService.getUserTimeline(
-      req.session.user.accessToken,
-      req.session.user.id
-    );
+// Ensure user is authenticated before proceeding
+const ensureAuthenticated = (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.accessToken) {
+    res.status(401).json({ error: 'User not authenticated' });
+    return false;
+  }
+  return true;
+};
+
+// Get trending data for user
+export const getTrends = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!ensureAuthenticated(req, res)) return;
+
+    const trends = await xApiService.getPersonalizedTrends(req.user!.accessToken);
     res.json(trends);
   } catch (error) {
-    console.error('[Trends] Error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error fetching trends:', error);
+    res.status(500).json({ error: 'Failed to fetch trends' });
+  }
+};
+
+export const getTimeline = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!ensureAuthenticated(req, res)) return;
+
+    const timeline = await xApiService.getUserTimeline(req.user!.accessToken, req.user!.id);
+    res.json(timeline);
+  } catch (error) {
+    console.error('Error fetching timeline:', error);
     res.status(500).json({ error: 'Failed to fetch timeline' });
   }
 };
@@ -219,5 +239,99 @@ export const autoProcessTrend = async (req: Request, res: Response): Promise<voi
   } catch (error) {
     console.error('Error in auto process:', error);
     res.status(500).json({ error: 'Failed to auto process trend' });
+  }
+};
+
+export const searchTrendMedia = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!ensureAuthenticated(req, res)) return;
+
+    const trend = req.body as PersonalizedTrend;
+    if (!trend) {
+      res.status(400).json({ error: 'No trend data provided' });
+      return;
+    }
+
+    const searchResults = await xApiService.searchTrendMedia(req.user!.accessToken, trend);
+    res.json(searchResults);
+  } catch (error) {
+    console.error('Error searching trend media:', error);
+    res.status(500).json({ error: 'Failed to search trend media' });
+  }
+};
+
+export const swapMedia = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!ensureAuthenticated(req, res)) return;
+
+    if (!req.user.profileImageUrl) {
+      res.status(400).json({ error: 'No profile image available' });
+      return;
+    }
+
+    const trend = req.body as PersonalizedTrend;
+    if (!trend) {
+      res.status(400).json({ error: 'No trend data provided' });
+      return;
+    }
+
+    const avatarResponse = await axios.get(req.user.profileImageUrl, { responseType: 'arraybuffer' });
+    const mediaBuffer = Buffer.from(avatarResponse.data);
+
+    const mediaId = await xApiService.uploadMedia(req.user.accessToken, mediaBuffer);
+    if (!mediaId) {
+      res.status(500).json({ error: 'Failed to upload media' });
+      return;
+    }
+
+    const tweetText = `Check out this trend: ${trend.name}`;
+    const tweetId = await xApiService.postTweet(
+      req.user.accessToken,
+      tweetText,
+      mediaId
+    );
+
+    res.json({
+      success: true,
+      tweetUrl: `https://x.com/${req.user.username}/status/${tweetId}`
+    });
+  } catch (error) {
+    console.error('Error swapping media:', error);
+    res.status(500).json({ error: 'Failed to swap media' });
+  }
+};
+
+export const generatePost = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!ensureAuthenticated(req, res)) return;
+
+    if (!req.user.profileImageUrl) {
+      res.status(400).json({ error: 'No profile image available' });
+      return;
+    }
+
+    const trend = req.body as PersonalizedTrend;
+    if (!trend) {
+      res.status(400).json({ error: 'No trend data provided' });
+      return;
+    }
+
+    const avatarResponse = await axios.get(req.user.profileImageUrl, { responseType: 'arraybuffer' });
+    const mediaBuffer = Buffer.from(avatarResponse.data);
+
+    const mediaId = await xApiService.uploadMedia(req.user.accessToken, mediaBuffer);
+    if (!mediaId) {
+      res.status(500).json({ error: 'Failed to upload media' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      tweetUrl: `https://x.com/${req.user.username}/status/${mediaId}`,
+      mediaId
+    });
+  } catch (error) {
+    console.error('Error generating post:', error);
+    res.status(500).json({ error: 'Failed to generate post' });
   }
 }; 
