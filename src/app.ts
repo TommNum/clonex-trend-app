@@ -97,10 +97,10 @@ app.get('/api/timeline', async (req, res) => {
 
   try {
     const posts = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
-    res.json(posts);
+    return res.json(posts);
   } catch (error) {
     console.error('Error fetching timeline:', error);
-    res.status(500).json({ error: 'Failed to fetch timeline' });
+    return res.status(500).json({ error: 'Failed to fetch timeline' });
   }
 });
 
