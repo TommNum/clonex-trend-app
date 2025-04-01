@@ -5,21 +5,30 @@ import { User, PersonalizedTrend, TrendMedia } from '../types';
 interface TimelinePost {
   id: string;
   text: string;
-  author_id: string;
   created_at: string;
+  author_id: string;
   attachments?: {
     media_keys: string[];
+  };
+  public_metrics?: {
+    like_count: number;
+    retweet_count: number;
   };
 }
 
 interface TimelineMedia {
   media_key: string;
   type: string;
-  url?: string;
-  variants?: Array<{
+  url: string;
+  preview_image_url?: string;
+  width?: number;
+  height?: number;
+  alt_text?: string;
+  variants?: {
     bit_rate?: number;
+    content_type: string;
     url: string;
-  }>;
+  }[];
 }
 
 interface TimelineUser {
@@ -29,14 +38,12 @@ interface TimelineUser {
   profile_image_url: string;
 }
 
-interface TimelineIncludes {
-  media?: TimelineMedia[];
-  users?: TimelineUser[];
-}
-
 interface TimelineResponse {
   data: TimelinePost[];
-  includes?: TimelineIncludes;
+  includes?: {
+    media?: TimelineMedia[];
+    users?: TimelineUser[];
+  };
 }
 
 interface ApiResponse {
@@ -364,64 +371,61 @@ export class XApiService {
   // Get user's timeline with media
   async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get<ApiResponse>(`${this.baseUrl}/users/${userId}/timelines/reverse_chronological`, {
+      const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/tweets`, {
         headers: {
-          'Authorization': `Bearer ${accessToken}`
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
         },
         params: {
-          'tweet.fields': 'created_at,attachments,author_id',
+          'exclude': 'replies,retweets',
           'expansions': 'attachments.media_keys,author_id',
-          'media.fields': 'url,variants',
-          'user.fields': 'profile_image_url,name',
-          'exclude': 'replies,retweets'
+          'media.fields': 'url,preview_image_url,width,height,alt_text,variants',
+          'tweet.fields': 'created_at,public_metrics',
+          'user.fields': 'username,name,profile_image_url'
         }
       });
 
-      const posts = response.data.data.data;
-      const includes = response.data.data.includes || {};
+      // Check if we have valid data
+      if (!response.data?.data) {
+        console.log('No timeline data received');
+        return [];
+      }
 
-      const postsWithMedia = posts.filter((post: TimelinePost) =>
-        post.attachments?.media_keys && post.attachments.media_keys.length > 0
-      );
-
-      return postsWithMedia.map((post: TimelinePost) => {
-        const mediaKeys = post.attachments?.media_keys || [];
-        const mediaItems = mediaKeys
-          .map((key: string) => includes.media?.find((m: TimelineMedia) => m.media_key === key))
-          .filter((m): m is TimelineMedia => m !== undefined && (m.type === 'photo' || m.type === 'animated_gif'));
-
-        if (!mediaItems.length) return null;
-
-        const media = mediaItems[0];
-        const author = includes.users?.find((u: TimelineUser) => u.id === post.author_id);
-
-        const mediaUrl = media.type === 'animated_gif' && media.variants
-          ? media.variants.sort((a, b) => (b.bit_rate || 0) - (a.bit_rate || 0))[0].url
-          : media.url;
-
-        if (!mediaUrl) return null;
+      // Filter posts with media and map to PersonalizedTrend format
+      const posts = response.data.data.filter(post =>
+        post.attachments?.media_keys?.length > 0
+      ).map(post => {
+        const media = response.data.includes?.media?.find(m =>
+          post.attachments.media_keys.includes(m.media_key)
+        );
+        const author = response.data.includes?.users?.find(u =>
+          u.id === post.author_id
+        );
 
         return {
           id: post.id,
-          name: `@${author?.username || 'unknown'}: ${post.text.slice(0, 50)}...`,
+          name: post.text,
           query: post.text,
-          tweet_volume: 0,
-          post_count: 0,
-          url: `https://x.com/${author?.username || 'unknown'}/status/${post.id}`,
-          media_url: mediaUrl,
-          created_at: post.created_at,
+          tweet_volume: post.public_metrics?.like_count || 0,
+          post_count: post.public_metrics?.retweet_count || 0,
+          url: `https://x.com/${author?.username}/status/${post.id}`,
+          media_url: media?.url || media?.preview_image_url,
+          width: media?.width,
+          height: media?.height,
+          alt_text: media?.alt_text,
           author: author ? {
             username: author.username,
             name: author.name,
             profile_image_url: author.profile_image_url
           } : undefined,
-          alt_text: ''
+          created_at: post.created_at
         };
-      }).filter((post): post is NonNullable<typeof post> => post !== null);
+      });
 
+      return posts;
     } catch (error) {
       console.error('Error fetching user timeline:', error);
-      throw error;
+      return [];
     }
   }
 }

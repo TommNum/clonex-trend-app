@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const captionInput = document.getElementById('caption');
     const postToXBtn = document.getElementById('postToX');
 
+    // Check if required elements exist
+    if (!timelineContainer) {
+        console.error('Timeline container not found');
+        return;
+    }
+
     let selectedPost = null;
 
     // Add global styles to fix layout
@@ -96,8 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(globalStyle);
 
-    // Update button label
-    refreshTimelineBtn.textContent = 'Refresh Timeline';
+    // Update button label if it exists
+    if (refreshTimelineBtn) {
+        refreshTimelineBtn.textContent = 'Refresh Timeline';
+    }
 
     // Function to render posts
     function renderPosts(posts) {
@@ -108,6 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         timelineContainer.innerHTML = '<div class="timeline-grid"></div>';
         const grid = timelineContainer.querySelector('.timeline-grid');
+
+        if (!grid) {
+            console.error('Grid container not found');
+            return;
+        }
 
         grid.innerHTML = posts.map(post => `
             <div class="post-card" data-post-id="${post.id}">
