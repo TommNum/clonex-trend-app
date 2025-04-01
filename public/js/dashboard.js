@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const refreshTrendsBtn = document.getElementById('refreshTrends');
+    const refreshTimelineBtn = document.getElementById('refreshTrends');
     const autoProcessBtn = document.getElementById('autoProcess');
-    const trendsContainer = document.getElementById('trendsContainer');
+    const timelineContainer = document.getElementById('trendsContainer');
     const mediaPreview = document.getElementById('mediaPreview');
     const processResult = document.getElementById('processResult');
     const resultImage = document.getElementById('resultImage');
@@ -10,11 +10,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedPost = null;
 
-    // Fetch and display trends
-    async function fetchTrends() {
+    // Add global styles to fix layout
+    const globalStyle = document.createElement('style');
+    globalStyle.textContent = `
+        /* Reset container constraints */
+        .container, 
+        .max-w-7xl,
+        main,
+        .dashboard-content {
+            max-width: none !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Grid layout styles */
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .post-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: fit-content;
+        }
+
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-image {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+        }
+
+        .post-content {
+            padding: 15px;
+        }
+
+        .post-author {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .author-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .post-text {
+            color: #E1E1E1;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .engagement {
+            display: flex;
+            gap: 10px;
+        }
+
+        .selected {
+            border: 2px solid #1DA1F2;
+        }
+    `;
+    document.head.appendChild(globalStyle);
+
+    // Fetch and display timeline
+    async function fetchTimeline() {
         try {
-            trendsContainer.innerHTML = '<p class="loading">Loading timeline...</p>';
-            const response = await fetch('/api/trends');
+            timelineContainer.innerHTML = '<p class="loading">Loading timeline...</p>';
+            const response = await fetch('/api/timeline');
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -23,74 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const posts = await response.json();
-            console.log('Posts received:', posts.length);
+            console.log('Timeline posts received:', posts.length);
 
             if (!posts.length || !Array.isArray(posts)) {
-                trendsContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
+                timelineContainer.innerHTML = '<p>No posts found. Try refreshing!</p>';
                 return;
             }
 
-            // Add CSS for the grid layout
-            const style = document.createElement('style');
-            style.textContent = `
-                .posts-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                    gap: 20px;
-                    padding: 20px;
-                }
-                .post-card {
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 12px;
-                    overflow: hidden;
-                    transition: transform 0.2s;
-                    cursor: pointer;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .post-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-                }
-                .post-image {
-                    width: 100%;
-                    height: 250px;
-                    object-fit: cover;
-                }
-                .post-content {
-                    padding: 15px;
-                }
-                .post-author {
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 10px;
-                }
-                .author-avatar {
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 50%;
-                    margin-right: 8px;
-                }
-                .post-text {
-                    color: #E1E1E1;
-                    font-size: 14px;
-                    line-height: 1.4;
-                    margin-bottom: 10px;
-                }
-                .post-meta {
-                    display: flex;
-                    justify-content: space-between;
-                    color: #888;
-                    font-size: 12px;
-                }
-                .engagement {
-                    display: flex;
-                    gap: 10px;
-                }
-            `;
-            document.head.appendChild(style);
-
-            trendsContainer.innerHTML = '<div class="posts-grid"></div>';
-            const grid = trendsContainer.querySelector('.posts-grid');
+            timelineContainer.innerHTML = '<div class="timeline-grid"></div>';
+            const grid = timelineContainer.querySelector('.timeline-grid');
 
             grid.innerHTML = posts.map(post => `
                 <div class="post-card" data-post-id="${post.id}">
@@ -112,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="post-text">${post.query}</div>
                         <div class="post-meta">
                             <div class="engagement">
-                                <span>❤️ ${post.tweet_volume}</span>
-                                <span>🔄 ${post.post_count}</span>
+                                <span>❤️ ${post.tweet_volume || 0}</span>
+                                <span>🔄 ${post.post_count || 0}</span>
                             </div>
-                            <span>${new Date(post.created_at).toLocaleDateString()}</span>
+                            <span>${post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown date'}</span>
                         </div>
                     </div>
                 </div>
@@ -127,8 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } catch (error) {
-            console.error('Error fetching posts:', error);
-            trendsContainer.innerHTML = '<p class="error">Error loading posts. Please try again.</p>';
+            console.error('Error fetching timeline:', error);
+            timelineContainer.innerHTML = '<p class="error">Error loading timeline. Please try again.</p>';
         }
     }
 
@@ -230,10 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event listeners
-    refreshTrendsBtn.addEventListener('click', fetchTrends);
+    refreshTimelineBtn.addEventListener('click', fetchTimeline);
     autoProcessBtn.addEventListener('click', autoProcessTrend);
     postToXBtn.addEventListener('click', postToX);
 
     // Initial load
-    fetchTrends();
+    fetchTimeline();
 }); 
