@@ -1,10 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syncopate:wght@400;700&family=Archivo+Black&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Custom styles */
+/* Base styles */
 :root {
   --primary-color: #00B4D8;
   --primary-hover: #0096C7;
@@ -18,21 +14,160 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--secondary-color);
   line-height: 1.5;
+  margin: 0;
+  padding: 0;
 }
 
-a {
-  color: var(--primary-color);
-  text-decoration: none;
+/* Layout */
+.container {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
 }
 
-a:hover {
-  text-decoration: underline;
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
 }
 
+/* Cards */
+.post-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: fit-content;
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.post-card.selected {
+  border: 2px solid #1DA1F2;
+}
+
+.post-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+.post-content {
+  padding: 15px;
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.author-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.post-text {
+  color: #E1E1E1;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.post-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #888;
+  font-size: 12px;
+}
+
+.engagement {
+  display: flex;
+  gap: 10px;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background-color: #1DA1F2;
+  color: white;
+}
+
+.btn.primary:hover {
+  background-color: #1a91da;
+}
+
+.btn.secondary {
+  background-color: #4a5568;
+  color: white;
+}
+
+.btn.secondary:hover {
+  background-color: #2d3748;
+}
+
+.btn.highlight {
+  background-color: #48bb78;
+  color: white;
+}
+
+.btn.highlight:hover {
+  background-color: #38a169;
+}
+
+/* States */
+.loading {
+  color: #718096;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.error {
+  color: #e53e3e;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* Media Preview */
+.media-preview img {
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.media-controls {
+  margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .timeline-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Custom styles */
 .btn-primary {
   @apply bg-cerulean hover:bg-cerulean/90 text-white font-medium py-2 px-4 rounded-full transition duration-200;
 }
@@ -122,28 +257,4 @@ a:hover {
   .main-content {
     @apply ml-0;
   }
-}
-
-.loading {
-    @apply text-gray-500 text-center py-4;
-}
-
-.error {
-    @apply text-red-500 text-center py-4;
-}
-
-.btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors;
-}
-
-.btn.primary {
-    @apply bg-blue-500 text-white hover:bg-blue-600;
-}
-
-.btn.secondary {
-    @apply bg-gray-500 text-white hover:bg-gray-600;
-}
-
-.btn.highlight {
-    @apply bg-green-500 text-white hover:bg-green-600;
 } 
