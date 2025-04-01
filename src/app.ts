@@ -103,14 +103,14 @@ app.get('/dashboard', async (req, res) => {
   }
 
   try {
-    // Get active trends count
-    const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    const trends = systemAccessToken ? await xApiService.getPersonalizedTrends(systemAccessToken) : [];
+    // Get active posts count from user timeline
+    const posts = req.session.user.id ?
+      await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id) : [];
 
     res.render('dashboard', {
       user: req.session.user,
       stats: {
-        activeTrends: trends.length || 0
+        activeTrends: posts.length || 0
       }
     });
   } catch (error) {
@@ -139,19 +139,21 @@ async function storeTrend(processedTrend: ProcessedTrend): Promise<void> {
 cron.schedule('0 */4 * * *', async () => {
   try {
     const systemAccessToken = process.env.SYSTEM_ACCESS_TOKEN;
-    if (!systemAccessToken) {
-      console.error('System access token not configured');
+    const systemUserId = process.env.SYSTEM_USER_ID;
+
+    if (!systemAccessToken || !systemUserId) {
+      console.error('System access token or user ID not configured');
       return;
     }
 
-    const trends = await xApiService.getPersonalizedTrends(systemAccessToken);
-    for (const trend of trends) {
-      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, trend);
-      const processedTrend = await openAIService.analyzeTrendAndMedia(trend);
+    const posts = await xApiService.getUserTimeline(systemAccessToken, systemUserId);
+    for (const post of posts) {
+      const searchResults = await xApiService.searchTrendMedia(systemAccessToken, post);
+      const processedTrend = await openAIService.analyzeTrendAndMedia(post);
       processedTrend.mediaItems = searchResults;
 
       if (processedTrend.processingSuitability >= 75) {
-        // Store high-suitability trends for later processing
+        // Store high-suitability posts for later processing
         await storeTrend(processedTrend);
       }
     }

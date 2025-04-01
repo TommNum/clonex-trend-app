@@ -47,6 +47,17 @@ export interface PersonalizedTrend {
   post_count: number;
   url: string;
   trend_name?: string;
+  media_url?: string;
+  width?: number;
+  height?: number;
+  alt_text?: string;
+  author?: {
+    username: string;
+    name: string;
+    profile_image_url: string;
+  };
+  created_at?: string;
+  engagement?: number;
 }
 
 export interface TrendMedia {

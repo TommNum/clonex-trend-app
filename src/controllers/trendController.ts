@@ -20,17 +20,20 @@ const openAIService = new OpenAIService();
 // Get trending data for user
 export const getTrends = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.session?.user?.accessToken) {
-      console.log('[Trends] No access token in session');
-      res.status(401).json({ error: 'No access token available' });
+    if (!req.session?.user?.accessToken || !req.session?.user?.id) {
+      console.log('[Trends] No access token or user ID in session');
+      res.status(401).json({ error: 'No access token or user ID available' });
       return;
     }
 
-    const trends = await xApiService.getPersonalizedTrends(req.session.user.accessToken);
+    const trends = await xApiService.getUserTimeline(
+      req.session.user.accessToken,
+      req.session.user.id
+    );
     res.json(trends);
   } catch (error) {
     console.error('[Trends] Error:', error instanceof Error ? error.message : 'Unknown error');
-    res.status(500).json({ error: 'Failed to fetch trends' });
+    res.status(500).json({ error: 'Failed to fetch timeline' });
   }
 };
 
