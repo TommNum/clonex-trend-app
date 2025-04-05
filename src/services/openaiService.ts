@@ -21,27 +21,53 @@ export class OpenAIService {
   // Analyze trend and media to determine if it's suitable for avatar swap
   async analyzeTrendAndMedia(trend: PersonalizedTrend): Promise<ProcessedTrend> {
     try {
-      const prompt = `Analyze this trend: "${trend.trend_name}" with ${trend.post_count} posts. 
-      Determine if it's suitable for avatar swapping and provide a thematic description.`;
+      const prompt = `Analyze this trend and its associated media:
+Trend: ${trend.name}
+Media URL: ${trend.media_url}
+Author: ${trend.author.name} (@${trend.author.username})
+Tweet: ${trend.text}
+
+Please provide:
+1. A brief analysis of the trend's content and context
+2. The main theme or topic
+3. The emotional tone
+4. Key visual elements in the media
+5. A score from 0-100 indicating how suitable this content is for processing into an avatar (considering visual quality, relevance, and uniqueness)`;
 
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [{ role: "user", content: prompt }],
+        model: "gpt-4-turbo-preview",
+        messages: [
+          {
+            role: "system",
+            content: "You are a trend analysis assistant that evaluates social media content for avatar generation suitability."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
       });
 
-      const analysis = completion.choices[0].message.content || '';
-      const suitability = this.calculateSuitability(analysis);
+      const analysis = completion.choices[0]?.message?.content || "No analysis available";
+      const processingSuitability = this.extractProcessingScore(analysis);
+
+      // Parse the analysis to extract structured data
+      const themeMatch = analysis.match(/Theme or topic: (.*?)(?:\n|$)/i);
+      const sentimentMatch = analysis.match(/Emotional tone: (.*?)(?:\n|$)/i);
+      const elementsMatch = analysis.match(/Key visual elements: (.*?)(?:\n|$)/i);
 
       return {
         trendId: trend.id,
-        trendName: trend.trend_name,
-        mediaItems: [],
+        trendName: trend.name,
         thematicDescription: analysis,
-        processingSuitability: suitability
+        processingSuitability,
+        mediaItems: []
       };
     } catch (error) {
       console.error('Error analyzing trend:', error);
-      throw new Error('Failed to analyze trend');
+      throw error;
     }
   }
 
@@ -168,5 +194,11 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
       console.error('Error generating user tweet:', error);
       throw error;
     }
+  }
+
+  private extractProcessingScore(analysis: string): number {
+    // Extract a number between 0-100 from the analysis text
+    const scoreMatch = analysis.match(/\b\d{1,3}\b/);
+    return scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[0]))) : 50;
   }
 } 
