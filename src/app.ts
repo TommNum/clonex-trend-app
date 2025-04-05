@@ -14,6 +14,7 @@ import authRoutes from './routes/auth';
 import trendRoutes from './routes/trends';
 import { XApiService } from './services/xApiService';
 import { OpenAIService } from './services/openaiService';
+import { UserService } from './services/userService';
 
 // Load environment variables
 dotenv.config();
@@ -152,9 +153,10 @@ app.get('/dashboard', async (req, res) => {
   try {
     console.log(`Loading dashboard for user ${req.session.user.id}`);
 
-    // Get user's own tweets for tweet generation
-    console.log('Fetching user tweets for generation');
-    const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    // Get user's tweets from database (with optional refresh)
+    console.log('Fetching user tweets');
+    const userService = new UserService();
+    const userTweets = await userService.getUserTweets(req.session.user.id);
     console.log(`Fetched ${userTweets.length} user tweets`);
 
     // Generate a new tweet based on user's style
