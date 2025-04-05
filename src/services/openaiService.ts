@@ -203,8 +203,8 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
             content: prompt
           }
         ],
-        temperature: 0.5,
-        max_tokens: 1000
+        temperature: 0.7,
+        max_tokens: 150
       });
 
       const generatedTweet = completion.choices[0]?.message?.content?.trim();
