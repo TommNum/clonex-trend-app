@@ -5,14 +5,16 @@ import { User, PersonalizedTrend, TrendMedia } from '../types';
 interface TimelinePost {
   id: string;
   text: string;
-  created_at: string;
   author_id: string;
+  created_at: string;
   attachments?: {
-    media_keys: string[];
+    media_keys?: string[];
   };
   public_metrics?: {
-    like_count: number;
     retweet_count: number;
+    reply_count: number;
+    like_count: number;
+    quote_count: number;
   };
 }
 
@@ -391,38 +393,42 @@ export class XApiService {
         return [];
       }
 
-      // Filter posts with media and map to PersonalizedTrend format
-      const posts = response.data.data.filter(post =>
-        post.attachments?.media_keys?.length > 0
-      ).map(post => {
-        const media = response.data.includes?.media?.find(m =>
-          post.attachments.media_keys.includes(m.media_key)
-        );
-        const author = response.data.includes?.users?.find(u =>
-          u.id === post.author_id
-        );
+      // Map the response to PersonalizedTrend format
+      return response.data.data
+        .filter((post: TimelinePost) => post.attachments?.media_keys?.length)
+        .map((post: TimelinePost) => {
+          const media = response.data.includes?.media?.find(
+            (m: TimelineMedia) => m.media_key === post.attachments?.media_keys?.[0]
+          );
+          const author = response.data.includes?.users?.find(
+            (u: TimelineUser) => u.id === post.author_id
+          );
 
-        return {
-          id: post.id,
-          name: post.text,
-          query: post.text,
-          tweet_volume: post.public_metrics?.like_count || 0,
-          post_count: post.public_metrics?.retweet_count || 0,
-          url: `https://x.com/${author?.username}/status/${post.id}`,
-          media_url: media?.url || media?.preview_image_url,
-          width: media?.width,
-          height: media?.height,
-          alt_text: media?.alt_text,
-          author: author ? {
-            username: author.username,
-            name: author.name,
-            profile_image_url: author.profile_image_url
-          } : undefined,
-          created_at: post.created_at
-        };
-      });
-
-      return posts;
+          return {
+            id: post.id,
+            name: author?.name || 'Unknown',
+            trend_name: author?.name || 'Unknown',
+            query: post.text.substring(0, 50), // Use first 50 chars of tweet as query
+            tweet_volume: post.public_metrics?.retweet_count || 0,
+            post_count: 1,
+            url: `https://twitter.com/${author?.username}/status/${post.id}`,
+            media_url: media?.url || media?.preview_image_url || '',
+            author: {
+              id: author?.id || '',
+              username: author?.username || '',
+              name: author?.name || '',
+              profile_image_url: author?.profile_image_url || ''
+            },
+            text: post.text,
+            created_at: post.created_at,
+            public_metrics: {
+              retweet_count: post.public_metrics?.retweet_count || 0,
+              reply_count: post.public_metrics?.reply_count || 0,
+              like_count: post.public_metrics?.like_count || 0,
+              quote_count: post.public_metrics?.quote_count || 0
+            }
+          };
+        });
     } catch (error) {
       console.error('Error fetching user timeline:', error);
       return [];
