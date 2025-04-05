@@ -8,6 +8,7 @@ import multer from 'multer';
 import fs from 'fs';
 import cron from 'node-cron';
 import { ProcessedTrend } from './types';
+import OpenAI from 'openai';
 
 import authRoutes from './routes/auth';
 import trendRoutes from './routes/trends';
@@ -24,6 +25,11 @@ const PORT = process.env.NODE_PORT || 3001;
 // Initialize services
 const xApiService = new XApiService();
 const openAIService = new OpenAIService();
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.CLONEX_TEST_API_KEY,
+});
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -118,6 +124,15 @@ app.get('/dashboard', async (req, res) => {
   }
 
   try {
+    // Get user's tweets
+    const userTweets = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
+
+    // Extract tweet text from the timeline
+    const tweetTexts = userTweets.map(tweet => tweet.text);
+
+    // Generate a new tweet based on user's style
+    const generatedTweet = await openAIService.generateUserTweet(tweetTexts);
+
     // Get active posts count from user timeline
     const posts = req.session.user.id ?
       await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id) : [];
@@ -127,16 +142,18 @@ app.get('/dashboard', async (req, res) => {
       stats: {
         activeTrends: posts.length || 0
       },
-      initialPosts: posts // Pass posts to template
+      initialPosts: posts,
+      generatedTweet: generatedTweet // Pass the generated tweet to the template
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error('Error fetching dashboard data:', error);
     res.render('dashboard', {
       user: req.session.user,
       stats: {
         activeTrends: 0
       },
-      initialPosts: [] // Pass empty array if error
+      initialPosts: [],
+      generatedTweet: null
     });
   }
 });

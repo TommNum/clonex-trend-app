@@ -265,6 +265,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Handle posting generated tweet
+    const postGeneratedTweetBtn = document.getElementById('postGeneratedTweet');
+    if (postGeneratedTweetBtn) {
+        postGeneratedTweetBtn.addEventListener('click', async () => {
+            const tweet = postGeneratedTweetBtn.dataset.tweet;
+            if (!tweet) return;
+
+            try {
+                const response = await fetch('/api/tweets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: tweet }),
+                });
+
+                if (response.ok) {
+                    alert('Tweet posted successfully!');
+                    // Optionally refresh the timeline
+                    await fetchTimeline();
+                } else {
+                    throw new Error('Failed to post tweet');
+                }
+            } catch (error) {
+                console.error('Error posting tweet:', error);
+                alert('Failed to post tweet. Please try again.');
+            }
+        });
+    }
+
     // Initialize the timeline
     fetchTimeline();
 }); 

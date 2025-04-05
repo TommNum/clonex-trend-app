@@ -371,23 +371,19 @@ export class XApiService {
   // Get user's timeline with media
   async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
     try {
-      const response = await axios.get<TimelineResponse>(
-        `${this.baseUrl}/users/${userId}/timelines/reverse_chronological`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          params: {
-            'max_results': 100,
-            'exclude': 'replies,retweets',
-            'expansions': 'attachments.media_keys,author_id',
-            'media.fields': 'url,preview_image_url,width,height,alt_text,variants',
-            'tweet.fields': 'created_at,public_metrics',
-            'user.fields': 'username,name,profile_image_url'
-          }
+      const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/tweets`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          'exclude': 'replies,retweets',
+          'expansions': 'attachments.media_keys,author_id',
+          'media.fields': 'url,preview_image_url,width,height,alt_text,variants',
+          'tweet.fields': 'created_at,public_metrics',
+          'user.fields': 'username,name,profile_image_url'
         }
-      );
+      });
 
       // Check if we have valid data
       if (!response.data?.data) {

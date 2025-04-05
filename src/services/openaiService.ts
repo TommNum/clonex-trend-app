@@ -11,7 +11,7 @@ const writeFileAsync = promisify(fs.writeFile);
 
 export class OpenAIService {
   private openai: OpenAI;
-  
+
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -85,12 +85,12 @@ export class OpenAIService {
   // Helper to extract media items from search results
   private extractMediaFromSearchResults(searchResults: any) {
     const mediaItems = [];
-    
+
     // Check if search results and includes exist
     if (!searchResults?.includes?.media || !searchResults?.data) {
       return [];
     }
-    
+
     // Create a map of media items
     const mediaMap = searchResults.includes.media.reduce((acc: any, media: any) => {
       acc[media.media_key] = {
@@ -102,7 +102,7 @@ export class OpenAIService {
       };
       return acc;
     }, {});
-    
+
     // Match tweets to their media
     for (const tweet of searchResults.data) {
       if (tweet.attachments?.media_keys) {
@@ -113,7 +113,7 @@ export class OpenAIService {
         }
       }
     }
-    
+
     return mediaItems;
   }
 
@@ -125,12 +125,48 @@ export class OpenAIService {
 
   private async generateCaption(processedTrend: ProcessedTrend): Promise<string> {
     const prompt = `Generate a witty caption for a social media post about the trend "${processedTrend.trendName}". The post should be engaging and relevant to the trend's theme: ${processedTrend.thematicDescription}`;
-    
+
     const completion = await this.openai.chat.completions.create({
       model: "gpt-4",
       messages: [{ role: "user", content: prompt }],
     });
 
     return completion.choices[0].message.content || "Check out this trend!";
+  }
+
+  async generateUserTweet(userTweets: string[]): Promise<string> {
+    try {
+      const prompt = `You are a tweet generation assistant. Analyze the following tweets from a user and generate a new tweet in their style and voice. The tweet should be authentic, engaging, and feel like it was written by the same person. Here are their recent tweets:
+
+${userTweets.slice(0, 10).join('\n')}
+
+Generate a new tweet that matches their style, tone, and interests. The tweet should be between 100-280 characters.`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: "gpt-4-turbo-preview",
+        messages: [
+          {
+            role: "system",
+            content: "You are a tweet generation assistant that creates authentic, engaging tweets in the user's voice."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 150
+      });
+
+      const generatedTweet = completion.choices[0]?.message?.content?.trim();
+      if (!generatedTweet) {
+        throw new Error('Failed to generate tweet');
+      }
+
+      return generatedTweet;
+    } catch (error) {
+      console.error('Error generating user tweet:', error);
+      throw error;
+    }
   }
 } 

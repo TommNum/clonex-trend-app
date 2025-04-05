@@ -108,33 +108,51 @@
                     </div>
                 </div>
                 
-                <div class="dashboard-content">
-                    <div class="trends-panel">
-                        <h2>Your Personalized Trends</h2>
-                        <div id="trendsContainer" class="trends-container">
-                            <p class="loading">Loading trends...</p>
+                <div class="container mx-auto px-4 py-8">
+                    <% if (generatedTweet) { %>
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                            <h2 class="text-xl font-semibold mb-4">Generated Tweet</h2>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                <p class="text-gray-800"><%= generatedTweet %></p>
+                            </div>
+                            <button 
+                                id="postGeneratedTweet" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+                                data-tweet="<%= generatedTweet %>"
+                            >
+                                Post Tweet
+                            </button>
+                        </div>
+                    <% } %>
+
+                    <div class="dashboard-content">
+                        <div class="trends-panel">
+                            <h2>Your Personalized Trends</h2>
+                            <div id="trendsContainer" class="trends-container">
+                                <p class="loading">Loading trends...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="result-panel">
+                            <h2>Media Preview</h2>
+                            <div id="mediaPreview" class="media-preview">
+                                <p>Select a trend to preview media</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="result-panel">
-                        <h2>Media Preview</h2>
-                        <div id="mediaPreview" class="media-preview">
-                            <p>Select a trend to preview media</p>
+                    <div id="processResult" class="process-result hidden">
+                        <h3>Ready to Post</h3>
+                        <div class="result-content">
+                            <div class="result-image">
+                                <img id="resultImage" src="" alt="Processed Image">
+                            </div>
+                            <div class="result-caption">
+                                <textarea id="caption" rows="3" placeholder="Caption"></textarea>
+                            </div>
                         </div>
+                        <button id="postToX" class="btn primary">Post to X</button>
                     </div>
-                </div>
-                
-                <div id="processResult" class="process-result hidden">
-                    <h3>Ready to Post</h3>
-                    <div class="result-content">
-                        <div class="result-image">
-                            <img id="resultImage" src="" alt="Processed Image">
-                        </div>
-                        <div class="result-caption">
-                            <textarea id="caption" rows="3" placeholder="Caption"></textarea>
-                        </div>
-                    </div>
-                    <button id="postToX" class="btn primary">Post to X</button>
                 </div>
             </div>
         </main>
