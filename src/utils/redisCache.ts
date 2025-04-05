@@ -7,7 +7,7 @@ export class RedisCache<T> extends Cache<T> {
 
     constructor(ttl: number = 15 * 60 * 1000) {
         super(ttl);
-        this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+        this.redis = new Redis(process.env.REDIS_URL + '?family=0' || 'redis://localhost:6379');
         this.prefix = 'timeline:';
     }
 
