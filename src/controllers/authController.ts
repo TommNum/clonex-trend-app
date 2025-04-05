@@ -37,106 +37,43 @@ export const login = (req: Request, res: Response) => {
   }
 };
 
-export const callback = async (req: Request, res: Response) => {
+export const handleCallback = async (req: Request, res: Response) => {
+  const { code, state } = req.query;
+  const storedState = req.session.state;
+
+  if (!code || !state || state !== storedState) {
+    console.log('Invalid state or missing code');
+    return res.redirect('/auth/login?error=invalid_state');
+  }
+
   try {
-    console.log('=== Callback Debug Info ===');
-    console.log('Environment:', process.env.NODE_ENV);
-    console.log('Callback URL:', process.env.X_CALLBACK_URL);
-    console.log('Request URL:', req.protocol + '://' + req.get('host') + req.originalUrl);
-    console.log('Query parameters:', req.query);
-    console.log('Session state:', {
-      id: req.session.id,
-      hasCodeVerifier: !!req.session.codeVerifier,
-      codeVerifier: req.session.codeVerifier,
-      user: req.session.user
-    });
-
-    const { code, state, error } = req.query;
-    const { codeVerifier } = req.session;
-
-    if (error) {
-      console.error('OAuth error:', error);
-      return res.status(400).json({ error: `OAuth error: ${error}` });
-    }
-
-    if (!code || !codeVerifier) {
-      console.error('Missing required parameters:', {
-        code: !!code,
-        codeVerifier: !!codeVerifier,
-        sessionId: req.session.id,
-        sessionExists: !!req.session
-      });
-      return res.status(400).json({
-        error: 'Missing code or code verifier',
-        details: {
-          hasCode: !!code,
-          hasCodeVerifier: !!codeVerifier,
-          sessionId: req.session.id
-        }
-      });
-    }
-
-    console.log('Attempting to exchange code for token');
-    console.log('Code:', code);
-    console.log('Code verifier length:', codeVerifier.length);
-
-    const tokens = await xApiService.getTokens(code.toString(), codeVerifier);
-    console.log('Successfully exchanged code for token');
-
-    // Get user info using the access token
-    const userInfo = await xApiService.getUserInfo(tokens.accessToken);
-    console.log('User info:', {
-      id: userInfo.id,
-      username: userInfo.username,
-      hasAccessToken: !!tokens.accessToken,
-      hasRefreshToken: !!tokens.refreshToken
-    });
+    const { accessToken, refreshToken, user } = await xApiService.exchangeCodeForToken(code as string);
 
     // Store user in database
     const dbUser = await userService.findOrCreateUser({
-      id: userInfo.id,
-      username: userInfo.username,
-      name: userInfo.name || userInfo.username,
-      profile_image_url: userInfo.profileImageUrl || '',
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken || ''
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      profile_image_url: user.profile_image_url,
+      access_token: accessToken,
+      refresh_token: refreshToken
     });
 
-    const user: User = {
-      id: userInfo.id,
-      username: userInfo.username,
-      email: userInfo.email,
-      profileImageUrl: userInfo.profileImageUrl,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || '',
-      tokenExpiry: Math.floor(Date.now() / 1000) + tokens.expiresIn,
-      role: 'user'
+    // Store user in session
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      profile_image_url: user.profile_image_url,
+      accessToken,
+      refreshToken
     };
 
-    req.session.user = user;
-    console.log('Successfully authenticated user:', userInfo.username);
-    return res.redirect('/dashboard');
+    console.log(`User ${user.id} logged in successfully`);
+    res.redirect('/dashboard');
   } catch (error) {
-    console.error('=== Callback Error ===');
-    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      return res.status(error.response?.status || 500).json({
-        error: 'Authentication failed',
-        details: error.response?.data || 'Unknown error'
-      });
-    }
-    return res.status(500).json({
-      error: 'Authentication failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Error during authentication:', error);
+    res.redirect('/auth/login?error=auth_failed');
   }
 };
 
@@ -206,15 +143,14 @@ export const refreshToken = async (req: Request, res: Response) => {
   }
 
   try {
-    const tokens = await xApiService.refreshAccessToken(req.session.user.refreshToken);
+    const { accessToken, refreshToken } = await xApiService.refreshAccessToken(req.session.user.refreshToken);
 
     // Update tokens in database
-    await userService.updateUserTokens(req.session.user.id, tokens.accessToken, tokens.refreshToken || '');
+    await userService.updateUserTokens(req.session.user.id, accessToken, refreshToken);
 
     // Update session
-    req.session.user.accessToken = tokens.accessToken;
-    req.session.user.refreshToken = tokens.refreshToken || '';
-    req.session.user.tokenExpiry = Math.floor(Date.now() / 1000) + tokens.expiresIn;
+    req.session.user.accessToken = accessToken;
+    req.session.user.refreshToken = refreshToken;
 
     console.log(`Tokens refreshed for user ${req.session.user.id}`);
     res.json({ success: true });

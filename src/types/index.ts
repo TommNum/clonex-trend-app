@@ -26,7 +26,6 @@ export interface Avatar {
 export interface User {
   id: string;
   username: string;
-  name: string;
   email?: string;
   profileImageUrl?: string;
   accessToken: string;
@@ -43,10 +42,10 @@ export interface AuthResponse {
 export interface PersonalizedTrend {
   id: string;
   name: string;
-  trend_name: string;
   query: string;
   tweet_volume: number;
   post_count: number;
+  trend_name: string;
   url: string;
   media_url: string;
   author: {
@@ -66,11 +65,17 @@ export interface PersonalizedTrend {
 }
 
 export interface TrendMedia {
-  id: string;
-  url: string;
+  mediaUrl: string;
   type: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
+  altText?: string;
+  url?: string;
+  variants?: {
+    bitrate?: number;
+    content_type: string;
+    url: string;
+  }[];
 }
 
 export interface ProcessedTrend {

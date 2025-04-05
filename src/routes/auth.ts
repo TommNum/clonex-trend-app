@@ -1,17 +1,22 @@
-import express from 'express';
-import { login, callback, logout, jwtLogin, getCurrentUser, refreshToken } from '../controllers/authController';
-import { authMiddleware } from '../middleware/auth';
+import { Router } from 'express';
+import * as authController from '../controllers/authController';
+import { isNotAuthenticated, checkSession } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// OAuth routes
-router.get('/login', login);
-router.get('/callback', callback);
-router.get('/logout', logout);
+// Apply session check middleware to all auth routes
+router.use(checkSession);
 
-// JWT routes
-router.post('/jwt/login', jwtLogin);
-router.get('/jwt/me', authMiddleware, getCurrentUser);
-router.post('/jwt/refresh', refreshToken);
+// Apply middleware to prevent authenticated users from accessing login
+router.use('/login', isNotAuthenticated);
+
+// Auth routes
+router.get('/login', authController.login);
+router.get('/callback', authController.callback);
+router.get('/logout', authController.logout);
+
+// JWT-specific routes
+router.post('/jwt/login', isNotAuthenticated, authController.jwtLogin);
+router.get('/me', authController.getCurrentUser);
 
 export default router; 

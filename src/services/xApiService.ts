@@ -134,27 +134,42 @@ export class XApiService {
     refreshToken: string;
     expiresIn: number;
   }> {
+    if (!this.callbackUrl) {
+      throw new Error('Callback URL not configured');
+    }
+
+    // Create Basic Auth header for confidential client
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
+    const params = new URLSearchParams();
+    params.append('code', code);
+    params.append('grant_type', 'authorization_code');
+    params.append('redirect_uri', this.callbackUrl);
+    params.append('code_verifier', codeVerifier);
+
     try {
-      const response = await axios.post(`${this.baseUrl}/oauth2/token`, {
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: this.callbackUrl,
-        code_verifier: codeVerifier,
-        client_id: process.env.X_CLIENT_ID
-      }, {
+      const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${Buffer.from(`${process.env.X_CLIENT_ID}:${process.env.X_CLIENT_SECRET}`).toString('base64')}`
-        }
+          'Authorization': `Basic ${auth}`
+        },
       });
+
+      if (!response.data.access_token) {
+        throw new Error('No access token in response');
+      }
 
       return {
         accessToken: response.data.access_token,
         refreshToken: response.data.refresh_token,
-        expiresIn: response.data.expires_in
+        expiresIn: response.data.expires_in,
       };
     } catch (error) {
-      console.error('Error getting tokens:', error);
+      console.error('Error exchanging code for tokens:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response data:', error.response?.data);
+        throw new Error(`Failed to exchange code for tokens: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
+      }
       throw error;
     }
   }
@@ -162,28 +177,37 @@ export class XApiService {
   // Refresh access token using refresh token
   async refreshAccessToken(refreshToken: string): Promise<{
     accessToken: string;
-    refreshToken: string;
     expiresIn: number;
   }> {
+    // Create Basic Auth header for confidential client
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
+    const params = new URLSearchParams();
+    params.append('refresh_token', refreshToken);
+    params.append('grant_type', 'refresh_token');
+
     try {
-      const response = await axios.post(`${this.baseUrl}/oauth2/token`, {
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-        client_id: process.env.X_CLIENT_ID
-      }, {
+      const response = await axios.post('https://api.x.com/2/oauth2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${Buffer.from(`${process.env.X_CLIENT_ID}:${process.env.X_CLIENT_SECRET}`).toString('base64')}`
-        }
+          'Authorization': `Basic ${auth}`
+        },
       });
+
+      if (!response.data.access_token) {
+        throw new Error('No access token in response');
+      }
 
       return {
         accessToken: response.data.access_token,
-        refreshToken: response.data.refresh_token,
-        expiresIn: response.data.expires_in
+        expiresIn: response.data.expires_in,
       };
     } catch (error) {
       console.error('Error refreshing token:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response data:', error.response?.data);
+        throw new Error(`Failed to refresh token: ${error.response?.data?.error_description || error.response?.data?.error || 'Unknown error'}`);
+      }
       throw error;
     }
   }
@@ -192,25 +216,26 @@ export class XApiService {
   async getUserInfo(accessToken: string): Promise<{
     id: string;
     username: string;
-    name: string;
     profileImageUrl: string;
   }> {
     try {
-      const response = await axios.get(`${this.baseUrl}/users/me`, {
+      const response = await axios.get('https://api.x.com/2/users/me', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        params: {
+          'user.fields': 'profile_image_url,username',
+        },
       });
 
       return {
         id: response.data.data.id,
         username: response.data.data.username,
-        name: response.data.data.name,
-        profileImageUrl: response.data.data.profile_image_url
+        profileImageUrl: response.data.data.profile_image_url,
       };
     } catch (error) {
       console.error('Error getting user info:', error);
-      throw error;
+      throw new Error('Failed to get user information');
     }
   }
 
