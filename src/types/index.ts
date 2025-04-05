@@ -46,18 +46,21 @@ export interface PersonalizedTrend {
   tweet_volume: number;
   post_count: number;
   url: string;
-  trend_name?: string;
-  media_url?: string;
-  width?: number;
-  height?: number;
-  alt_text?: string;
-  author?: {
+  media_url: string;
+  author: {
+    id: string;
     username: string;
     name: string;
     profile_image_url: string;
   };
-  created_at?: string;
-  engagement?: number;
+  text: string;
+  created_at: string;
+  public_metrics: {
+    retweet_count: number;
+    reply_count: number;
+    like_count: number;
+    quote_count: number;
+  };
 }
 
 export interface TrendMedia {
