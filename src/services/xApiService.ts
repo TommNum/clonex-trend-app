@@ -370,8 +370,8 @@ export class XApiService {
     return [];
   }
 
-  // Get user's timeline with media
-  async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
+  // Get user's own tweets for tweet generation
+  async getUserTweets(accessToken: string, userId: string): Promise<string[]> {
     try {
       const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/tweets`, {
         headers: {
@@ -379,6 +379,34 @@ export class XApiService {
           'Content-Type': 'application/json'
         },
         params: {
+          'max_results': 100,
+          'exclude': 'replies,retweets',
+          'tweet.fields': 'text'
+        }
+      });
+
+      if (!response.data?.data) {
+        console.log('No tweets data received');
+        return [];
+      }
+
+      return response.data.data.map((post: TimelinePost) => post.text);
+    } catch (error) {
+      console.error('Error fetching user tweets:', error);
+      return [];
+    }
+  }
+
+  // Get user's timeline with media
+  async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
+    try {
+      const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/timelines/reverse_chronological`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          'max_results': 100,
           'exclude': 'replies,retweets',
           'expansions': 'attachments.media_keys,author_id',
           'media.fields': 'url,preview_image_url,width,height,alt_text,variants',
@@ -387,13 +415,11 @@ export class XApiService {
         }
       });
 
-      // Check if we have valid data
       if (!response.data?.data) {
         console.log('No timeline data received');
         return [];
       }
 
-      // Map the response to PersonalizedTrend format
       return response.data.data
         .filter((post: TimelinePost) => post.attachments?.media_keys?.length)
         .map((post: TimelinePost) => {
@@ -408,7 +434,7 @@ export class XApiService {
             id: post.id,
             name: author?.name || 'Unknown',
             trend_name: author?.name || 'Unknown',
-            query: post.text.substring(0, 50), // Use first 50 chars of tweet as query
+            query: post.text.substring(0, 50),
             tweet_volume: post.public_metrics?.retweet_count || 0,
             post_count: 1,
             url: `https://twitter.com/${author?.username}/status/${post.id}`,

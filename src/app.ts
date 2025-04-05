@@ -110,6 +110,22 @@ app.get('/api/timeline', async (req, res) => {
   }
 });
 
+// Regenerate tweet endpoint
+app.post('/api/regenerate-tweet', async (req, res) => {
+  if (!req.session.user?.accessToken || !req.session.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    const generatedTweet = await openAIService.generateUserTweet(userTweets);
+    return res.json({ tweet: generatedTweet });
+  } catch (error) {
+    console.error('Error regenerating tweet:', error);
+    return res.status(500).json({ error: 'Failed to regenerate tweet' });
+  }
+});
+
 // Home route
 app.get('/', (req, res) => {
   res.render('index', {
@@ -124,18 +140,14 @@ app.get('/dashboard', async (req, res) => {
   }
 
   try {
-    // Get user's tweets
-    const userTweets = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
-
-    // Extract tweet text from the timeline
-    const tweetTexts = userTweets.map(tweet => tweet.text);
+    // Get user's own tweets for tweet generation
+    const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
 
     // Generate a new tweet based on user's style
-    const generatedTweet = await openAIService.generateUserTweet(tweetTexts);
+    const generatedTweet = await openAIService.generateUserTweet(userTweets);
 
-    // Get active posts count from user timeline
-    const posts = req.session.user.id ?
-      await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id) : [];
+    // Get timeline posts for the dashboard
+    const posts = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
 
     res.render('dashboard', {
       user: req.session.user,
@@ -143,7 +155,7 @@ app.get('/dashboard', async (req, res) => {
         activeTrends: posts.length || 0
       },
       initialPosts: posts,
-      generatedTweet: generatedTweet // Pass the generated tweet to the template
+      generatedTweet: generatedTweet
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
