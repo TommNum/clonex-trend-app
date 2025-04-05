@@ -208,7 +208,7 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
       });
 
       const generatedTweet = completion.choices[0]?.message?.content?.trim();
-      console.log("completion", completion)
+      console.log("completion", JSON.stringify(completion.choices[0]?.message))
       if (!generatedTweet) {
         throw new Error('Failed to generate tweet');
       }
