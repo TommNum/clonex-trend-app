@@ -195,7 +195,10 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
     If you receive refinement questions, carefully address each one to improve your analysis.
     
     CRITICAL: Capture the essence of HOW this person communicates - their unique voice that
-    distinguishes them from others.`
+    distinguishes them from others.
+    
+    Based on the above, please generate a tweet in the user's voice.
+    `
           },
           {
             role: "user",
