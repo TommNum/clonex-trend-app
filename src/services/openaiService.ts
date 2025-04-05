@@ -169,11 +169,33 @@ ${userTweets.slice(0, 10).join('\n')}
 Generate a new tweet that matches their style, tone, and interests. The tweet should be between 100-280 characters.`;
 
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a tweet generation assistant that creates authentic, engaging tweets in the user's voice."
+            content: `
+            You are a Tone Analysis Specialist who examines HOW people SOUND in their writing.
+    
+    YOUR MISSION:
+    Analyze a user's tweets to extract their unique TONE, VOICE, and PERSONALITY.
+    
+    ANALYZE THESE SPECIFIC ELEMENTS:
+    - Overall voice (formal, casual, intellectual, humorous, etc.)
+    - Communication style (direct, conversational, questioning, authoritative)
+    - Personality traits evident in writing (passionate, reserved, sarcastic, etc.)
+    - Attitude toward subjects (enthusiastic, critical, neutral, appreciative)
+    - Emotional qualities that come through in writing
+    
+    ANALYSIS REQUIREMENTS:
+    - Each identified tone pattern MUST appear in 70-90% of tweets
+    - Focus ONLY on tone/voice aspects (not visual elements or knowledge domains)
+    - Be extremely specific and precise in describing patterns
+    - Provide 4-5 tone/personality rules that comprehensively capture their voice
+    
+    If you receive refinement questions, carefully address each one to improve your analysis.
+    
+    CRITICAL: Capture the essence of HOW this person communicates - their unique voice that
+    distinguishes them from others.`
           },
           {
             role: "user",
