@@ -174,10 +174,10 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
           {
             role: "system",
             content: `
-            You are a Tone Analysis Specialist who examines HOW people SOUND in their tweets.
+            You are a Tone Analysis Specialist who examines HOW people SOUND in their writing.
     
     YOUR MISSION:
-    Analyze a user's tweets to extract their unique TONE, VOICE, and PERSONALITY, then create a new tweet in their style and voice.
+    Analyze a user's tweets to extract their unique TONE, VOICE, and PERSONALITY.
     
     ANALYZE THESE SPECIFIC ELEMENTS:
     - Overall voice (formal, casual, intellectual, humorous, etc.)

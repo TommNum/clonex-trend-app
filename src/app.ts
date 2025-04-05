@@ -98,11 +98,14 @@ app.use('/api/trends', trendRoutes);
 // Add timeline endpoint
 app.get('/api/timeline', async (req, res) => {
   if (!req.session.user?.accessToken || !req.session.user?.id) {
+    console.log('Timeline request failed: Unauthorized - Missing access token or user ID');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
+    console.log(`Fetching timeline for user ${req.session.user.id}`);
     const posts = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
+    console.log(`Successfully fetched ${posts.length} posts for user ${req.session.user.id}`);
     return res.json(posts);
   } catch (error) {
     console.error('Error fetching timeline:', error);
@@ -113,12 +116,18 @@ app.get('/api/timeline', async (req, res) => {
 // Regenerate tweet endpoint
 app.post('/api/regenerate-tweet', async (req, res) => {
   if (!req.session.user?.accessToken || !req.session.user?.id) {
+    console.log('Regenerate tweet request failed: Unauthorized - Missing access token or user ID');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
+    console.log(`Regenerating tweet for user ${req.session.user.id}`);
     const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    console.log(`Fetched ${userTweets.length} user tweets for generation`);
+
     const generatedTweet = await openAIService.generateUserTweet(userTweets);
+    console.log('Successfully generated new tweet');
+
     return res.json({ tweet: generatedTweet });
   } catch (error) {
     console.error('Error regenerating tweet:', error);
@@ -136,19 +145,29 @@ app.get('/', (req, res) => {
 // Dashboard route
 app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
+    console.log('Dashboard request failed: Unauthorized - No session user');
     return res.redirect('/auth/login');
   }
 
   try {
+    console.log(`Loading dashboard for user ${req.session.user.id}`);
+
     // Get user's own tweets for tweet generation
+    console.log('Fetching user tweets for generation');
     const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    console.log(`Fetched ${userTweets.length} user tweets`);
 
     // Generate a new tweet based on user's style
+    console.log('Generating new tweet');
     const generatedTweet = await openAIService.generateUserTweet(userTweets);
+    console.log('Successfully generated tweet');
 
     // Get timeline posts for the dashboard
+    console.log('Fetching timeline posts');
     const posts = await xApiService.getUserTimeline(req.session.user.accessToken, req.session.user.id);
+    console.log(`Fetched ${posts.length} timeline posts`);
 
+    console.log('Rendering dashboard template');
     res.render('dashboard', {
       user: req.session.user,
       stats: {
@@ -158,7 +177,7 @@ app.get('/dashboard', async (req, res) => {
       generatedTweet: generatedTweet
     });
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
+    console.error('Error loading dashboard:', error);
     res.render('dashboard', {
       user: req.session.user,
       stats: {
