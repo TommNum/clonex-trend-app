@@ -45,6 +45,7 @@ export interface PersonalizedTrend {
   query: string;
   tweet_volume: number;
   post_count: number;
+  trend_name: string;
   url: string;
   media_url: string;
   author: {
