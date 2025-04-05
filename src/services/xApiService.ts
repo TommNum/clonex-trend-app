@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import { User, PersonalizedTrend, TrendMedia } from '../types';
+import { RedisCache } from '../utils/redisCache';
 
 interface TimelinePost {
   id: string;
@@ -58,6 +59,7 @@ export class XApiService {
   private clientSecret: string;
   private callbackUrl: string;
   private client: any;
+  private timelineCache: RedisCache<PersonalizedTrend[]>;
 
   constructor() {
     this.baseUrl = 'https://api.x.com/2';
@@ -86,6 +88,8 @@ export class XApiService {
     this.client = axios.create({
       baseURL: this.baseUrl,
     });
+
+    this.timelineCache = new RedisCache<PersonalizedTrend[]>(15 * 60 * 1000); // 15 minutes TTL
   }
 
   // Generate OAuth 2.0 authorization URL with PKCE
@@ -400,6 +404,15 @@ export class XApiService {
   // Get user's timeline with media
   async getUserTimeline(accessToken: string, userId: string): Promise<PersonalizedTrend[]> {
     try {
+      // Check cache first
+      const cacheKey = `timeline:${userId}`;
+      const cachedData = await this.timelineCache.get(cacheKey);
+      if (cachedData) {
+        console.log(`Returning cached timeline data for user ${userId}`);
+        return cachedData;
+      }
+
+      console.log(`Fetching fresh timeline data for user ${userId}`);
       const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/timelines/reverse_chronological`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -420,7 +433,7 @@ export class XApiService {
         return [];
       }
 
-      return response.data.data
+      const posts = response.data.data
         .filter((post: TimelinePost) => post.attachments?.media_keys?.length)
         .map((post: TimelinePost) => {
           const media = response.data.includes?.media?.find(
@@ -455,10 +468,22 @@ export class XApiService {
             }
           };
         });
+
+      // Cache the results
+      await this.timelineCache.set(cacheKey, posts);
+      console.log(`Cached timeline data for user ${userId}`);
+
+      return posts;
     } catch (error) {
       console.error('Error fetching user timeline:', error);
       return [];
     }
+  }
+
+  // Clear cache for a specific user
+  async clearUserTimelineCache(userId: string): Promise<void> {
+    await this.timelineCache.clearForUser(userId);
+    console.log(`Cleared timeline cache for user ${userId}`);
   }
 }
 
