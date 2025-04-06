@@ -60,6 +60,7 @@ export class XApiService {
   private callbackUrl: string;
   private client: any;
   private timelineCache: RedisCache<PersonalizedTrend[]>;
+  private userTweetsCache: RedisCache<any[]>;
 
   constructor() {
     this.baseUrl = 'https://api.x.com/2';
@@ -90,6 +91,7 @@ export class XApiService {
     });
 
     this.timelineCache = new RedisCache<PersonalizedTrend[]>(15 * 60 * 1000); // 15 minutes TTL
+    this.userTweetsCache = new RedisCache<any[]>(60 * 60 * 1000); // 1 hour TTL
   }
 
   // Generate OAuth 2.0 authorization URL with PKCE
@@ -375,30 +377,48 @@ export class XApiService {
   }
 
   // Get user's own tweets for tweet generation
-  async getUserTweets(accessToken: string, userId: string): Promise<string[]> {
+  async getUserTweets(accessToken: string, userId: string): Promise<any[]> {
     try {
-      const response = await axios.get<TimelineResponse>(`${this.baseUrl}/users/${userId}/tweets`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          'max_results': 100,
-          'exclude': 'replies,retweets',
-          'tweet.fields': 'text'
-        }
-      });
-
-      if (!response.data?.data) {
-        console.log('No tweets data received');
-        return [];
+      // Check cache first
+      const cacheKey = `user_tweets:${userId}`;
+      const cachedTweets = await this.userTweetsCache.get(cacheKey);
+      if (cachedTweets) {
+        console.log(`Cache hit for user tweets: ${userId}`);
+        return cachedTweets;
       }
 
-      return response.data.data.map((post: TimelinePost) => post.text);
+      // If not in cache, fetch from Twitter API
+      console.log(`Fetching tweets for user ${userId} from Twitter API`);
+      const response = await axios.get(
+        `${this.baseUrl}/users/${userId}/tweets`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          params: {
+            'max_results': 100,
+            'tweet.fields': 'created_at,text'
+          }
+        }
+      );
+
+      const tweets = response.data.data || [];
+
+      // Cache the tweets
+      await this.userTweetsCache.set(cacheKey, tweets);
+      console.log(`Cached tweets for user: ${userId}`);
+
+      return tweets;
     } catch (error) {
       console.error('Error fetching user tweets:', error);
-      return [];
+      throw error;
     }
+  }
+
+  // Clear cache for a specific user's tweets
+  async clearUserTweetsCache(userId: string): Promise<void> {
+    await this.userTweetsCache.clearForUser(`user_tweets:${userId}`);
+    console.log(`Cleared tweets cache for user ${userId}`);
   }
 
   // Get user's timeline with media
