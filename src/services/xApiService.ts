@@ -377,14 +377,14 @@ export class XApiService {
   }
 
   // Get user's own tweets for tweet generation
-  async getUserTweets(accessToken: string, userId: string): Promise<any[]> {
+  async getUserTweets(accessToken: string, userId: string): Promise<string[]> {
     try {
       // Check cache first
       const cacheKey = `user_tweets:${userId}`;
       const cachedTweets = await this.userTweetsCache.get(cacheKey);
       if (cachedTweets) {
         console.log(`Cache hit for user tweets: ${userId}`);
-        return cachedTweets;
+        return cachedTweets.map((tweet: any) => tweet.text);
       }
 
       // If not in cache, fetch from Twitter API
@@ -404,11 +404,12 @@ export class XApiService {
 
       const tweets = response.data.data || [];
 
-      // Cache the tweets
+      // Cache the full tweet objects
       await this.userTweetsCache.set(cacheKey, tweets);
       console.log(`Cached tweets for user: ${userId}`);
 
-      return tweets;
+      // Return just the text array for OpenAI
+      return tweets.map((tweet: any) => tweet.text);
     } catch (error) {
       console.error('Error fetching user tweets:', error);
       throw error;
