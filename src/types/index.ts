@@ -1,3 +1,18 @@
+import { Session } from 'express-session';
+
+declare module 'express-session' {
+  interface Session {
+    user?: {
+      id: string;
+      username: string;
+      accessToken: string;
+      refreshToken: string;
+      profileImageUrl?: string;
+    };
+    userTweets?: string[];
+  }
+}
+
 export interface Trend {
   id: string;
   name: string;
