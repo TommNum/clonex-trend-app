@@ -113,6 +113,35 @@ app.get('/api/timeline', async (req, res) => {
   }
 });
 
+// Regenerate tweet endpoint
+app.post('/api/regenerate-tweet', async (req, res) => {
+  if (!req.session.user?.accessToken || !req.session.user?.id) {
+    console.log('Regenerate tweet request failed: Unauthorized - Missing access token or user ID');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    console.log(`Regenerating tweet for user ${req.session.user.id}`);
+    const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    console.log(`Fetched ${userTweets.length} user tweets for generation`);
+
+    const generatedTweet = await openAIService.generateUserTweet(userTweets);
+    console.log('Successfully generated new tweet');
+
+    return res.json({ tweet: generatedTweet });
+  } catch (error) {
+    console.error('Error regenerating tweet:', error);
+    return res.status(500).json({ error: 'Failed to regenerate tweet' });
+  }
+});
+
+// Home route
+app.get('/', (req, res) => {
+  res.render('index', {
+    user: req.session.user || null
+  });
+});
+
 // Dashboard route
 app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
@@ -123,18 +152,14 @@ app.get('/dashboard', async (req, res) => {
   try {
     console.log(`Loading dashboard for user ${req.session.user.id}`);
 
-    // Get user's own tweets for tweet generation if not already cached
-    if (!req.session.userTweets) {
-      console.log('Fetching user tweets for generation');
-      req.session.userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
-      console.log(`Cached ${req.session.userTweets.length} user tweets in session`);
-    } else {
-      console.log('Using cached user tweets from session');
-    }
+    // Get user's own tweets for tweet generation
+    console.log('Fetching user tweets for generation');
+    const userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
+    console.log(`Fetched ${userTweets.length} user tweets`);
 
     // Generate a new tweet based on user's style
     console.log('Generating new tweet');
-    const generatedTweet = await openAIService.generateUserTweet(req.session.userTweets);
+    const generatedTweet = await openAIService.generateUserTweet(userTweets);
     console.log('Successfully generated tweet');
 
     // Get timeline posts for the dashboard
@@ -162,35 +187,6 @@ app.get('/dashboard', async (req, res) => {
       generatedTweet: null
     });
   }
-});
-
-// Add regenerate tweet endpoint that uses cached tweets
-app.post('/api/regenerate-tweet', async (req, res) => {
-  if (!req.session.user?.accessToken || !req.session.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    // Use cached tweets instead of fetching again
-    if (!req.session.userTweets) {
-      console.log('No cached tweets found, fetching new ones');
-      req.session.userTweets = await xApiService.getUserTweets(req.session.user.accessToken, req.session.user.id);
-      console.log(`Cached ${req.session.userTweets.length} user tweets in session`);
-    }
-
-    const generatedTweet = await openAIService.generateUserTweet(req.session.userTweets);
-    return res.json({ tweet: generatedTweet });
-  } catch (error) {
-    console.error('Error regenerating tweet:', error);
-    return res.status(500).json({ error: 'Failed to regenerate tweet' });
-  }
-});
-
-// Home route
-app.get('/', (req, res) => {
-  res.render('index', {
-    user: req.session.user || null
-  });
 });
 
 // Function to store processed trends
