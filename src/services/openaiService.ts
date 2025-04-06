@@ -253,7 +253,7 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
             content: prompt
           }
         ],
-        temperature: 0.5,
+        temperature: 1,
         max_tokens: 1000
       });
 
