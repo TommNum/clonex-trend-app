@@ -345,3 +345,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the timeline
     fetchTimeline();
 }); 
+
+async function regenerateTweet() {
+    try {
+        const response = await fetch('/api/regenerate-tweet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to regenerate tweet');
+        }
+
+        const data = await response.json();
+        const tweetElement = document.querySelector('.bg-gray-50 p-4');
+        if (tweetElement) {
+            tweetElement.textContent = data.tweet;
+        }
+    } catch (error) {
+        console.error('Error regenerating tweet:', error);
+        alert('Failed to regenerate tweet. Please try again.');
+    }
+} 

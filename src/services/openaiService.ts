@@ -9,6 +9,12 @@ import sharp from 'sharp';
 
 const writeFileAsync = promisify(fs.writeFile);
 
+// Helper function to extract tweet from OpenAI response
+function extractTweetFromResponse(response: string): string {
+  const tweetMatch = response.match(/"([^"]+)"/);
+  return tweetMatch ? tweetMatch[1] : response;
+}
+
 export class OpenAIService {
   private openai: OpenAI;
 
@@ -213,7 +219,7 @@ Generate a new tweet that matches their style, tone, and interests. The tweet sh
         throw new Error('Failed to generate tweet');
       }
 
-      return generatedTweet;
+      return extractTweetFromResponse(generatedTweet);
     } catch (error) {
       console.error('Error generating user tweet:', error);
       throw error;
