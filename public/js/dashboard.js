@@ -320,9 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     const data = await response.json();
                     // Update the tweet text
-                    document.querySelector('.bg-gray-50 p').textContent = data.tweet;
-                    // Update the post button's data attribute
-                    postGeneratedTweetBtn.dataset.tweet = data.tweet;
+                    const tweetElement = document.getElementById('generatedTweetText');
+                    if (tweetElement) {
+                        tweetElement.textContent = data.tweet;
+                        // Update the post button's data attribute
+                        const postButton = document.getElementById('postGeneratedTweet');
+                        if (postButton) {
+                            postButton.dataset.tweet = data.tweet;
+                        }
+                    } else {
+                        console.error('Tweet element not found');
+                    }
                 } else {
                     throw new Error('Failed to regenerate tweet');
                 }
@@ -360,9 +368,16 @@ async function regenerateTweet() {
         }
 
         const data = await response.json();
-        const tweetElement = document.querySelector('.bg-gray-50 p-4');
+        const tweetElement = document.getElementById('generatedTweetText');
         if (tweetElement) {
             tweetElement.textContent = data.tweet;
+            // Update the post button's data attribute as well
+            const postButton = document.getElementById('postGeneratedTweet');
+            if (postButton) {
+                postButton.dataset.tweet = data.tweet;
+            }
+        } else {
+            console.error('Tweet element not found');
         }
     } catch (error) {
         console.error('Error regenerating tweet:', error);
